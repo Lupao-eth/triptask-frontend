@@ -24,7 +24,6 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ✅ Improved login flow: retry `/auth/me` after login with delay
 export async function loginUser(email: string, password: string, rememberMe = false) {
   const loginRes = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
@@ -40,9 +39,8 @@ export async function loginUser(email: string, password: string, rememberMe = fa
     throw new Error(loginData.message || 'Login failed');
   }
 
-  // 🔁 Retry checking session 3x with delay
   for (let i = 0; i < 3; i++) {
-    await sleep(300); // wait 300ms
+    await sleep(300);
     const meRes = await fetch(`${API_BASE}/auth/me`, {
       credentials: 'include',
     });
@@ -54,4 +52,12 @@ export async function loginUser(email: string, password: string, rememberMe = fa
   }
 
   throw new Error('Login succeeded, but session not established.');
+}
+
+// ✅ Fix: missing export
+export async function logoutUser() {
+  return fetch(`${API_BASE}/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  });
 }
