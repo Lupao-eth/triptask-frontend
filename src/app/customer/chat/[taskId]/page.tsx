@@ -20,13 +20,25 @@ type FileMeta = {
   name?: string;
 };
 
+type ChatMessage = {
+  sender: string;
+  text: string;
+  file_urls: FileMeta[];
+  timestamp: string;
+};
+
+type User = {
+  name: string;
+  role: string;
+};
+
 export default function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
-  const [chats, setChats] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null);
+  const [chats, setChats] = useState<ChatMessage[]>([]);
   const [newText, setNewText] = useState('');
   const [riderName, setRiderName] = useState('');
-  const [bookingStatus, setBookingStatus] = useState('Accepted');
+  const [bookingStatus] = useState('Accepted');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -48,8 +60,8 @@ export default function ChatPage() {
   useEffect(() => {
     fetch(`${API_BASE}/users`, { credentials: 'include' })
       .then(res => res.json())
-      .then(users => {
-        const rider = users.find((u: any) => u.role === 'rider');
+      .then((users: User[]) => {
+        const rider = users.find(u => u.role === 'rider');
         if (rider) setRiderName(rider.name);
       });
   }, []);
@@ -59,7 +71,7 @@ export default function ChatPage() {
     const fetchChats = () => {
       fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
         .then(res => res.json())
-        .then(data => setChats(Array.isArray(data) ? data : []))
+        .then((data: ChatMessage[]) => setChats(Array.isArray(data) ? data : []))
         .catch(() => setChats([]));
     };
     fetchChats();
@@ -200,7 +212,6 @@ export default function ChatPage() {
             chats.map((chat, idx) => {
               const isSender = chat.sender === user?.name;
               const bubbleColor = isSender ? 'bg-yellow-300' : 'bg-gray-300';
-              const files: FileMeta[] = Array.isArray(chat.file_urls) ? chat.file_urls : [];
 
               return (
                 <div
@@ -210,7 +221,7 @@ export default function ChatPage() {
                   <span className="text-xs text-gray-400 mb-1">{chat.sender}</span>
                   <div className={`rounded-xl px-4 py-2 text-sm ${bubbleColor}`}>
                     {chat.text && <p>{chat.text}</p>}
-                    {files.map((file, i) =>
+                    {chat.file_urls.map((file, i) =>
                       file.type?.startsWith('image/') ? (
                         <Image
                           key={i}
