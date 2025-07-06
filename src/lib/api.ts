@@ -10,6 +10,11 @@ export async function getCurrentUser() {
     const text = await res.text();
     console.log('📦 Raw /auth/me response (from context):', text);
 
+    if (!res.ok || !text) {
+      console.warn('⚠️ /auth/me failed or returned empty');
+      return null;
+    }
+
     const data = JSON.parse(text);
     console.log('✅ Parsed /auth/me response:', data);
 
@@ -39,22 +44,30 @@ export async function loginUser(email: string, password: string, rememberMe = fa
     throw new Error(loginData.message || 'Login failed');
   }
 
+  // Retry up to 3 times to check session
   for (let i = 0; i < 3; i++) {
     await sleep(300);
+
     const meRes = await fetch(`${API_BASE}/auth/me`, {
       credentials: 'include',
     });
-    const meData = await meRes.json();
 
-    if (meRes.ok && meData.user) {
-      return meData.user;
+    if (meRes.ok) {
+      const text = await meRes.text();
+      if (text) {
+        try {
+          const meData = JSON.parse(text);
+          if (meData.user) return meData.user;
+        } catch (err) {
+          console.warn('⚠️ Failed to parse /auth/me retry:', err);
+        }
+      }
     }
   }
 
   throw new Error('Login succeeded, but session not established.');
 }
 
-// ✅ Fix: missing export
 export async function logoutUser() {
   return fetch(`${API_BASE}/auth/logout`, {
     method: 'POST',
