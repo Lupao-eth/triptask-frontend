@@ -11,10 +11,19 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'fzyqoaohikmhdlzjfcax.supabase.co', // 🔁 your Supabase project domain
+        hostname: 'fzyqoaohikmhdlzjfcax.supabase.co',
         pathname: '/storage/v1/object/**',
       },
     ],
+  },
+
+  async rewrites() {
+    return [
+      {
+        source: '/api/backend/:path*',
+        destination: 'https://triptask-backend.up.railway.app/:path*',
+      },
+    ];
   },
 };
 

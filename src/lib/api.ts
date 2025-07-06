@@ -1,5 +1,7 @@
 // src/lib/api.ts
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+
+// ✅ Use proxy path to avoid cross-site cookie issues (iOS Safari fix)
+const API_BASE = '/api/backend';
 
 export async function getCurrentUser() {
   try {
@@ -29,7 +31,11 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function loginUser(email: string, password: string, rememberMe = false) {
+export async function loginUser(
+  email: string,
+  password: string,
+  rememberMe = false
+) {
   const loginRes = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     credentials: 'include',
@@ -44,7 +50,7 @@ export async function loginUser(email: string, password: string, rememberMe = fa
     throw new Error(loginData.message || 'Login failed');
   }
 
-  // Retry up to 3 times to check session
+  // ✅ Retry 3 times to confirm session cookie was set (esp. on Safari)
   for (let i = 0; i < 3; i++) {
     await sleep(300);
 
