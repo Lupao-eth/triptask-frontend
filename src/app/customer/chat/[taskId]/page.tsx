@@ -32,13 +32,17 @@ type User = {
   role: string;
 };
 
+type Task = {
+  status: string;
+};
+
 export default function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [chats, setChats] = useState<ChatMessage[]>([]);
   const [newText, setNewText] = useState('');
   const [riderName, setRiderName] = useState('');
-  const [bookingStatus] = useState('Accepted');
+  const [bookingStatus, setBookingStatus] = useState<string>('Loading...');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -78,6 +82,30 @@ export default function ChatPage() {
     const interval = setInterval(fetchChats, 3000);
     return () => clearInterval(interval);
   }, [taskId]);
+
+  useEffect(() => {
+    if (!taskId) return;
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
+          credentials: 'include',
+        });
+        const data: Task = await res.json();
+        setBookingStatus(data?.status || 'Unknown');
+
+        if (data?.status === 'completed') {
+          router.push('/customer/history');
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch booking status:', err);
+        setBookingStatus('Error');
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, [taskId, router]);
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
@@ -162,9 +190,14 @@ export default function ChatPage() {
             </button>
             <div className="flex-1 text-center">
               <div className="text-md font-bold text-gray-900">Booking #{taskId}</div>
-              <div className="text-sm text-gray-500">
-                Rider: {riderName || '...'} <br />
-                Status: {bookingStatus}
+              <div className="text-sm">
+                <span className="text-gray-500">Rider: {riderName || '...'} <br /></span>
+                {bookingStatus === 'on_the_way' && (
+                  <span className="text-orange-600 font-semibold">Status: On the Way</span>
+                )}
+                {bookingStatus !== 'on_the_way' && bookingStatus !== 'completed' && (
+                  <span className="text-gray-500">Status: {bookingStatus}</span>
+                )}
               </div>
             </div>
             <div className="w-6" />
