@@ -20,25 +20,24 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
         console.log('📡 Service status:', isOnline);
 
-        if (isOnline !== serviceOnline) {
-          setServiceOnline(isOnline);
+        // Always update
+        setServiceOnline(isOnline);
 
-          if (isOnline) {
-            setShowOverlay(true);
-            setTimeout(() => setShowOverlay(false), 2000);
-            if (refreshInterval.current) {
-              clearInterval(refreshInterval.current);
-              refreshInterval.current = null;
-            }
-          } else {
-            setShowOverlay(true);
-            if (!refreshInterval.current) {
-              refreshInterval.current = setInterval(checkServiceStatus, 10000);
-            }
+        if (isOnline) {
+          setShowOverlay(true);
+          setTimeout(() => setShowOverlay(false), 2000);
+          if (refreshInterval.current) {
+            clearInterval(refreshInterval.current);
+            refreshInterval.current = null;
+          }
+        } else {
+          setShowOverlay(true);
+          if (!refreshInterval.current) {
+            refreshInterval.current = setInterval(checkServiceStatus, 3000);
           }
         }
       } catch (err) {
-        console.error('Error checking service status:', err);
+        console.error('❌ Error checking service status:', err);
         setServiceOnline(false);
         setShowOverlay(true);
       }
@@ -49,7 +48,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     return () => {
       if (refreshInterval.current) clearInterval(refreshInterval.current);
     };
-  }, [serviceOnline]);
+  }, []);
 
   const handleRetry = () => {
     setServiceOnline(null);
@@ -102,7 +101,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         </div>
       )}
 
-      {/* Animations */}
       <style jsx>{`
         .animate-fade-in {
           animation: fadeIn 0.4s ease-out both;
