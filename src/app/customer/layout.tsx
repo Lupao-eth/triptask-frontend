@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
@@ -8,6 +8,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const [serviceOnline, setServiceOnline] = useState<boolean | null>(null);
   const [showOverlay, setShowOverlay] = useState(true);
+  const previousStatus = useRef<boolean | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -19,28 +20,35 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
         console.log('📡 Service status:', isOnline);
 
-        setServiceOnline(isOnline);
+        // Only update if status changed
+        if (previousStatus.current !== isOnline) {
+          previousStatus.current = isOnline;
+          setServiceOnline(isOnline);
+          setShowOverlay(true);
 
-        if (isOnline) {
-          setShowOverlay(true);
-          setTimeout(() => setShowOverlay(false), 2000);
-        } else {
-          setShowOverlay(true);
+          if (isOnline) {
+            setTimeout(() => setShowOverlay(false), 2000);
+          }
         }
       } catch (err) {
         console.error('❌ Error checking service status:', err);
-        setServiceOnline(false);
-        setShowOverlay(true);
+
+        if (previousStatus.current !== false) {
+          previousStatus.current = false;
+          setServiceOnline(false);
+          setShowOverlay(true);
+        }
       }
     };
 
-    checkServiceStatus();
+    checkServiceStatus(); // initial call
     const interval = setInterval(checkServiceStatus, 3000);
 
     return () => clearInterval(interval);
   }, []);
 
   const handleRetry = () => {
+    previousStatus.current = null;
     setServiceOnline(null);
     setShowOverlay(true);
   };
