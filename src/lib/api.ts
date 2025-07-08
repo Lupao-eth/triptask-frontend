@@ -1,7 +1,7 @@
 // src/lib/api.ts
 
 // ✅ Use proxy path to avoid cross-site cookie issues (iOS Safari fix)
-const API_BASE = '/api/backend';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api/backend';
 
 export async function getCurrentUser() {
   try {

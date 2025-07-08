@@ -62,18 +62,17 @@ export default function CustomerDashboard() {
   };
 
   if (loading) {
-  return (
-    <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
-      <div className="flex flex-col items-center space-y-4 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-600 border-t-transparent" />
-        <p className="text-lg sm:text-xl tracking-wide">Loading customer dashboard...</p>
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-600 border-t-transparent" />
+          <p className="text-lg sm:text-xl tracking-wide">Loading customer dashboard...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-if (!user) return null;
-
+  if (!user) return null;
 
   return (
     <main

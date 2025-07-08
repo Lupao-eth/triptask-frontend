@@ -51,6 +51,12 @@ export default function RiderDashboard() {
           >
             Book History
           </Link>
+          <Link
+            href="/rider/admin"
+            className="block bg-white border rounded-xl p-4 shadow hover:bg-yellow-100 font-medium"
+          >
+            Admin
+          </Link>
         </div>
 
         <button
