@@ -20,7 +20,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
         console.log('📡 Service status:', isOnline);
 
-        // Only update if status changed
+        // Only update UI if status changed
         if (previousStatus.current !== isOnline) {
           previousStatus.current = isOnline;
           setServiceOnline(isOnline);
@@ -41,8 +41,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       }
     };
 
-    checkServiceStatus(); // initial call
-    const interval = setInterval(checkServiceStatus, 3000);
+    checkServiceStatus(); // initial run
+    const interval = setInterval(checkServiceStatus, 60000); // ✅ 60 seconds
 
     return () => clearInterval(interval);
   }, []);
@@ -63,9 +63,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
       {showOverlay && (
         <div className="fixed inset-0 bg-white/90 backdrop-blur-md z-50 flex flex-col items-center justify-center text-center px-6 animate-zoom-float">
-          <h2 className="text-3xl font-bold text-yellow-500 mb-4 animate-pulse">
-            TRIPTASK
-          </h2>
+          <h2 className="text-3xl font-bold text-yellow-500 mb-4 animate-pulse">TRIPTASK</h2>
 
           {serviceOnline === null ? (
             <p className="text-base text-gray-600 animate-fade-in">Checking service status...</p>
