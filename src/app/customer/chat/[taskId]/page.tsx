@@ -219,7 +219,7 @@ export default function ChatPage() {
                   className={`flex flex-col max-w-[75%] ${isSender ? 'ml-auto items-end' : 'mr-auto items-start'}`}
                 >
                   <span className="text-xs text-gray-400 mb-1">{chat.sender}</span>
-                  <div className={`rounded-xl px-4 py-2 text-sm ${bubbleColor}`}>
+                  <div className={`rounded-xl px-4 py-2 text-sm ${bubbleColor} text-black`}>
                     {chat.text && <p>{chat.text}</p>}
                     {chat.file_urls.map((file, i) =>
                       file.type?.startsWith('image/') ? (
