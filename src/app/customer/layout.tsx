@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
@@ -8,33 +8,24 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const [serviceOnline, setServiceOnline] = useState<boolean | null>(null);
   const [showOverlay, setShowOverlay] = useState(true);
-  const refreshInterval = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const checkServiceStatus = async () => {
       try {
-        const res = await fetch(`${API_BASE}/service-status`);
+        const res = await fetch(`${API_BASE}/service-status`, { cache: 'no-store' });
         const data = await res.json();
         const isOnline = data.isOnline;
 
         console.log('📡 Service status:', isOnline);
 
-        // Always update
         setServiceOnline(isOnline);
 
         if (isOnline) {
           setShowOverlay(true);
           setTimeout(() => setShowOverlay(false), 2000);
-          if (refreshInterval.current) {
-            clearInterval(refreshInterval.current);
-            refreshInterval.current = null;
-          }
         } else {
           setShowOverlay(true);
-          if (!refreshInterval.current) {
-            refreshInterval.current = setInterval(checkServiceStatus, 3000);
-          }
         }
       } catch (err) {
         console.error('❌ Error checking service status:', err);
@@ -44,10 +35,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     };
 
     checkServiceStatus();
+    const interval = setInterval(checkServiceStatus, 3000);
 
-    return () => {
-      if (refreshInterval.current) clearInterval(refreshInterval.current);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleRetry = () => {
@@ -101,6 +91,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         </div>
       )}
 
+      {/* Animations */}
       <style jsx>{`
         .animate-fade-in {
           animation: fadeIn 0.4s ease-out both;
