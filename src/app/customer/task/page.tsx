@@ -221,7 +221,7 @@ const TaskPage = () => {
             <textarea
               className="w-full px-3 py-2 border border-gray-300 rounded"
               rows={2}
-              placeholder="09XXXXXXXXX and Special Notes to Rider (Optional)"
+              placeholder="09XXXXXXXXX and Special Notes to Rider"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
