@@ -217,11 +217,11 @@ const TaskPage = () => {
           </div>
 
           <div>
-            <label className="block mb-1 font-semibold">Notes to Rider (optional)</label>
+            <label className="block mb-1 font-semibold">PhoneNumber and Notes for the rider</label>
             <textarea
               className="w-full px-3 py-2 border border-gray-300 rounded"
               rows={2}
-              placeholder="Special Notes to Rider"
+              placeholder="09XXXXXXXXX and Special Notes to Rider (Optional)"
               value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
