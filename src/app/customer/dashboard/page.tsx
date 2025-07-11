@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from './TopBar';
+import TutorialModal from './TutorialModal';
+import TermsModal from './TermsModal'; // ✅ Import your terms modal
 
 type User = {
   id: string;
@@ -16,6 +18,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
 export default function CustomerDashboard() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [navigatingTask, setNavigatingTask] = useState(false);
   const [navigatingTrip, setNavigatingTrip] = useState(false);
   const router = useRouter();
@@ -40,16 +44,37 @@ export default function CustomerDashboard() {
         }
 
         setUser(data.user);
+        setLoading(false);
+
+        if (typeof window !== 'undefined') {
+          const seenTerms = localStorage.getItem('seenTerms');
+          const seenTutorial = localStorage.getItem('seenTutorial');
+
+          if (!seenTerms) {
+            setShowTerms(true);
+          } else if (!seenTutorial) {
+            setShowTutorial(true);
+          }
+        }
       } catch (err) {
         console.error('❗ Failed to fetch user:', err);
         router.push('/login');
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchUser();
   }, [router]);
+
+  const handleAgreeToTerms = () => {
+    localStorage.setItem('seenTerms', 'true');
+    setShowTerms(false);
+
+    // Show tutorial right after agreeing
+    const seenTutorial = localStorage.getItem('seenTutorial');
+    if (!seenTutorial) {
+      setShowTutorial(true);
+    }
+  };
 
   const handleGoToTask = () => {
     setNavigatingTask(true);
@@ -76,7 +101,7 @@ export default function CustomerDashboard() {
 
   return (
     <main
-      className="min-h-screen bg-gray-50 pt-20"
+      className="min-h-screen bg-gray-50 pt-20 relative"
       style={{ fontFamily: 'var(--font-geist-mono)' }}
     >
       <TopBar name={user.name || 'Customer'} />
@@ -107,6 +132,19 @@ export default function CustomerDashboard() {
           </button>
         </div>
       </div>
+
+      {/* ✅ Terms shows first */}
+      {showTerms && <TermsModal onAgree={handleAgreeToTerms} />}
+
+      {/* ✅ Tutorial shows after agreeing to terms */}
+      {showTutorial && (
+        <TutorialModal
+          onClose={() => {
+            localStorage.setItem('seenTutorial', 'true');
+            setShowTutorial(false);
+          }}
+        />
+      )}
     </main>
   );
 }

@@ -9,6 +9,7 @@ import {
   LogOut,
   MapPin,
   ClipboardList,
+  HelpCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -125,8 +126,15 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
           </button>
 
           <button
+            onClick={() => goTo('/customer/help')}
+            className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
+          >
+            <HelpCircle size={20} /> Help
+          </button>
+
+          <button
             onClick={handleLogout}
-            className="mt-8 flex items-center gap-3 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-yellow-300 rounded transition"
+            className="flex items-center gap-3 px-4 py-3 text-red-600 hover:text-red-700 hover:bg-yellow-300 rounded transition"
           >
             <LogOut size={20} /> Logout
           </button>

@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import SideMenu from './SideMenu';
 
 type TopBarProps = {
-  name: string;
+  name?: string; // Make optional to prevent crash
 };
 
-const TopBar: React.FC<TopBarProps> = ({ name }) => {
+const TopBar: React.FC<TopBarProps> = ({ name = '' }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const toggleMenu = () => setMenuOpen(prev => !prev);
@@ -25,15 +25,15 @@ const TopBar: React.FC<TopBarProps> = ({ name }) => {
           &#9776;
         </button>
 
-        {/* Home title with padding-left */}
+        {/* App title centered */}
         <h1 className="text-lg font-bold tracking-wide text-center pl-10">TripTask</h1>
 
-        {/* Profile: icon first, name second */}
+        {/* Profile info */}
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-yellow-600 rounded-full text-white flex items-center justify-center font-bold uppercase">
-            {name.charAt(0)}
+            {name?.charAt(0) || '?'}
           </div>
-          <span className="text-xs font-medium truncate max-w-[100px]">{name}</span>
+          <span className="text-xs font-medium truncate max-w-[100px]">{name || 'Guest'}</span>
         </div>
       </header>
     </>
