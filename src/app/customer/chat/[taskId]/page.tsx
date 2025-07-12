@@ -11,8 +11,10 @@ import {
   ArrowLeftIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
+import io, { Socket } from 'socket.io-client';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+let socket: Socket;
 
 type FileMeta = {
   url: string;
@@ -32,9 +34,9 @@ type User = {
   role: string;
 };
 
-type Task = {
-  status: string;
-};
+// type Task = {
+//   status: string;
+// };
 
 export default function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,6 +56,7 @@ export default function ChatPage() {
   const router = useRouter();
   const taskId = params?.taskId?.toString();
 
+  // Fetch current user
   useEffect(() => {
     fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
       .then(res => res.ok ? res.json() : Promise.reject())
@@ -61,6 +64,7 @@ export default function ChatPage() {
       .catch(() => router.push('/login'));
   }, [router]);
 
+  // Get rider name
   useEffect(() => {
     fetch(`${API_BASE}/users`, { credentials: 'include' })
       .then(res => res.json())
@@ -70,42 +74,39 @@ export default function ChatPage() {
       });
   }, []);
 
+  // Socket.IO - connect to room for status + chat
   useEffect(() => {
-    if (!taskId) return;
-    const fetchChats = () => {
-      fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
-        .then(res => res.json())
-        .then((data: ChatMessage[]) => setChats(Array.isArray(data) ? data : []))
-        .catch(() => setChats([]));
-    };
-    fetchChats();
-    const interval = setInterval(fetchChats, 3000);
-    return () => clearInterval(interval);
-  }, [taskId]);
+    if (!taskId || !user) return;
 
-  useEffect(() => {
-    if (!taskId) return;
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
-          credentials: 'include',
-        });
-        const data: Task = await res.json();
-        setBookingStatus(data?.status || 'Unknown');
+    socket = io(API_BASE, { withCredentials: true });
 
-        if (data?.status === 'completed') {
-          router.push('/customer/history');
-        }
-      } catch (err) {
-        console.error('❌ Failed to fetch booking status:', err);
-        setBookingStatus('Error');
+    socket.emit('join', `chat-${taskId}`);
+
+    // Receive real-time status updates
+    socket.on('status-update', (data: { status: string }) => {
+      setBookingStatus(data.status);
+      if (data.status === 'completed') {
+        router.push('/customer/history');
       }
-    };
+    });
 
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 5000);
-    return () => clearInterval(interval);
-  }, [taskId, router]);
+    // Receive new chat messages
+    socket.on('new-message', (message: ChatMessage) => {
+      setChats(prev => [...prev, message]);
+      scrollToBottom();
+    });
+
+    // Fetch initial chat history once
+    fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
+      .then(res => res.json())
+      .then((data: ChatMessage[]) => setChats(Array.isArray(data) ? data : []))
+      .catch(() => setChats([]));
+
+    return () => {
+      socket.emit('leave', `chat-${taskId}`);
+      socket.disconnect();
+    };
+  }, [taskId, user, router]);
 
   const handleScroll = () => {
     const container = chatContainerRef.current;

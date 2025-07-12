@@ -10,8 +10,10 @@ import {
   PhotoIcon,
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
+import io, { Socket } from 'socket.io-client';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+let socket: Socket;
 
 type FileMeta = {
   url: string;
@@ -52,33 +54,43 @@ export default function RiderChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch user
   useEffect(() => {
     fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setUser(data.user))
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setUser(data.user))
       .catch(() => router.replace('/login'));
   }, [router]);
 
+  // Socket setup
   useEffect(() => {
-    const fetchChats = () => {
-      fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
-        .then((res) => res.json())
-        .then((data) => setChats(Array.isArray(data) ? data : []))
-        .catch(() => setChats([]));
-    };
+    if (!taskId || !user) return;
 
-    fetchChats();
-    const interval = setInterval(fetchChats, 3000);
-    return () => clearInterval(interval);
-  }, [taskId]);
+    socket = io(API_BASE, { withCredentials: true });
+    socket.emit('join', `chat-${taskId}`);
 
-  useEffect(() => {
-    if (!taskId) return;
+    // Real-time message
+    socket.on('new-message', (message: Chat) => {
+      setChats(prev => [...prev, message]);
+      scrollToBottom();
+    });
+
+    // Real-time status update
+    socket.on('status-update', (data: { status: string }) => {
+      setBookingStatus(data.status);
+      if (data.status === 'completed') {
+        router.push('/rider/history');
+      }
+    });
+
+    // Initial chat + task data
+    fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
+      .then(res => res.json())
+      .then((data: Chat[]) => setChats(Array.isArray(data) ? data : []))
+      .catch(() => setChats([]));
+
     fetch(`${API_BASE}/tasks/${taskId}`, { credentials: 'include' })
-      .then((res) => {
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
+      .then(res => res.ok ? res.json() : Promise.reject())
       .then((task: Task) => {
         setBookingStatus(task.status);
         setCustomerName(task.name);
@@ -88,15 +100,26 @@ export default function RiderChatPage() {
         setCustomerName('');
         router.replace('/login');
       });
-  }, [taskId, router]);
+
+    return () => {
+      socket.emit('leave', `chat-${taskId}`);
+      socket.disconnect();
+    };
+  }, [taskId, user, router]);
+
+  const scrollToBottom = () => {
+    chatContainerRef.current?.scrollTo({
+      top: chatContainerRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = e.target.files;
-  if (files) {
-    setSelectedFiles((prev) => [...prev, ...Array.from(files)]);
-  }
-};
-
+    const files = e.target.files;
+    if (files) {
+      setSelectedFiles((prev) => [...prev, ...Array.from(files)]);
+    }
+  };
 
   const sendMessage = async () => {
     if (!newText.trim() && selectedFiles.length === 0) return;
