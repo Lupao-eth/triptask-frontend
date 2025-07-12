@@ -54,36 +54,62 @@ export default function RiderChatPage() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch user
+  // Step 1: Get user
   useEffect(() => {
     fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => setUser(data.user))
+      .then(data => {
+        setUser(data.user);
+      })
       .catch(() => router.replace('/login'));
   }, [router]);
 
-  // Socket setup
+  // Step 2: Get token and connect socket
   useEffect(() => {
-    if (!taskId || !user) return;
+    if (!user || !taskId) return;
 
-    socket = io(API_BASE, { withCredentials: true });
-    socket.emit('join', `chat-${taskId}`);
+    const setupSocket = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/token`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to fetch token');
+        const tokenData = await res.json();
+        const token = tokenData.token;
 
-    // Real-time message
-    socket.on('new-message', (message: Chat) => {
-      setChats(prev => [...prev, message]);
-      scrollToBottom();
-    });
+          socket = io(API_BASE, {
+            auth: { token },
+            transports: ['websocket'],
+          });
 
-    // Real-time status update
-    socket.on('status-update', (data: { status: string }) => {
-      setBookingStatus(data.status);
-      if (data.status === 'completed') {
-        router.push('/rider/history');
+        socket.emit('join', `chat-${taskId}`);
+
+        socket.on('new-message', (message: Chat) => {
+          setChats(prev => [...prev, message]);
+          scrollToBottom();
+        });
+
+        socket.on('status-update', (data: { status: string }) => {
+          setBookingStatus(data.status);
+          if (data.status === 'completed') {
+            router.push('/rider/history');
+          }
+        });
+      } catch (err) {
+        console.error('Socket setup failed:', err);
       }
-    });
+    };
 
-    // Initial chat + task data
+    setupSocket();
+
+    return () => {
+      socket?.emit('leave', `chat-${taskId}`);
+      socket?.disconnect();
+    };
+  }, [user, taskId, router]);
+
+  // Step 3: Load chats and task
+  useEffect(() => {
+    if (!taskId) return;
+
     fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
       .then(res => res.json())
       .then((data: Chat[]) => setChats(Array.isArray(data) ? data : []))
@@ -100,12 +126,7 @@ export default function RiderChatPage() {
         setCustomerName('');
         router.replace('/login');
       });
-
-    return () => {
-      socket.emit('leave', `chat-${taskId}`);
-      socket.disconnect();
-    };
-  }, [taskId, user, router]);
+  }, [taskId, router]);
 
   const scrollToBottom = () => {
     chatContainerRef.current?.scrollTo({
@@ -178,7 +199,7 @@ export default function RiderChatPage() {
       <TopBar />
 
       <div className="flex flex-col flex-1 max-w-4xl mx-auto w-full overflow-hidden">
-        {/* Sticky Header */}
+        {/* Header */}
         <div className="sticky top-0 z-10 bg-white border-b px-4 py-2">
           <div className="flex justify-between items-center">
             <button
@@ -255,7 +276,7 @@ export default function RiderChatPage() {
           </div>
         )}
 
-        {/* Chat Display */}
+        {/* Chat Bubbles */}
         <div
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto px-4 bg-gray-50"
@@ -327,7 +348,7 @@ export default function RiderChatPage() {
           </div>
         )}
 
-        {/* Message Input */}
+        {/* Input Bar */}
         <div className="fixed bottom-0 inset-x-0 bg-white border-t px-2 py-2 flex items-center gap-2 z-20 sm:px-4">
           <label className="cursor-pointer">
             <PhotoIcon className="h-5 w-5 text-gray-500" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
@@ -12,9 +12,25 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [showOverlay, setShowOverlay] = useState(true);
   const [loadingRetry, setLoadingRetry] = useState(false);
   const [loadingBack, setLoadingBack] = useState(false);
+  const [token, setToken] = useState<string | null>(null); // Add token state
   const router = useRouter();
+  const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch service status from API
+  // Fetch /auth/me
+  useEffect(() => {
+    fetch(`${API_BASE}/auth/me`, {
+      credentials: 'include',
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        setToken(data.token);
+      })
+      .catch(() => {
+        console.warn('Failed to fetch auth token');
+        setToken(null);
+      });
+  }, []);
+
   const fetchInitialStatus = async () => {
     try {
       const res = await fetch(`${API_BASE}/service-status`);
@@ -23,7 +39,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       setServiceOnline(data.isOnline);
       setShowOverlay(true);
       if (data.isOnline) {
-        setTimeout(() => setShowOverlay(false), 2000);
+        overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 2000);
       }
     } catch (err) {
       console.error('❌ Failed to fetch initial status:', err);
@@ -33,10 +49,13 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   };
 
   useEffect(() => {
+    if (!token) return;
     fetchInitialStatus();
 
-    // Connect to socket
-    socket = io(API_BASE, { withCredentials: true });
+    socket = io(API_BASE, {
+      auth: { token }, // ✅ Option B: send token explicitly
+      withCredentials: true,
+    });
 
     socket.on('connect', () => {
       console.log('🟢 Connected to Socket.IO');
@@ -47,7 +66,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       setServiceOnline(isOnline);
       setShowOverlay(true);
       if (isOnline) {
-        setTimeout(() => setShowOverlay(false), 2000);
+        overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 2000);
       }
     });
 
@@ -57,10 +76,9 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
     return () => {
       socket.disconnect();
+      if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);
     };
-  }, []);
-
-  // Retry service check
+  }, [token]);
   const handleRetry = async () => {
     setLoadingRetry(true);
     try {

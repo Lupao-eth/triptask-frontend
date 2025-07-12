@@ -34,10 +34,6 @@ type User = {
   role: string;
 };
 
-// type Task = {
-//   status: string;
-// };
-
 export default function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -56,13 +52,53 @@ export default function ChatPage() {
   const router = useRouter();
   const taskId = params?.taskId?.toString();
 
-  // Fetch current user
+  // Socket.IO setup with Option B
   useEffect(() => {
+    if (!taskId) return;
+
+    // Step 1: Get user first
     fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => setUser(data.user))
+      .then(async data => {
+        setUser(data.user);
+
+        // Step 2: Get token from /auth/token
+        const res = await fetch(`${API_BASE}/auth/token`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Token fetch failed');
+        const tokenData = await res.json();
+
+        // Step 3: Connect via token auth
+        socket = io(API_BASE, {
+          auth: { token: tokenData.token },
+          transports: ['websocket'],
+        });
+
+        socket.emit('join', `chat-${taskId}`);
+
+        socket.on('status-update', (data: { status: string }) => {
+          setBookingStatus(data.status);
+          if (data.status === 'completed') {
+            router.push('/customer/history');
+          }
+        });
+
+        socket.on('new-message', (message: ChatMessage) => {
+          setChats(prev => [...prev, message]);
+          scrollToBottom();
+        });
+
+        // Step 4: Fetch chat history
+        const chatRes = await fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' });
+        const chatData = await chatRes.json();
+        setChats(Array.isArray(chatData) ? chatData : []);
+      })
       .catch(() => router.push('/login'));
-  }, [router]);
+
+    return () => {
+      socket?.emit('leave', `chat-${taskId}`);
+      socket?.disconnect();
+    };
+  }, [taskId, router]);
 
   // Get rider name
   useEffect(() => {
@@ -73,40 +109,6 @@ export default function ChatPage() {
         if (rider) setRiderName(rider.name);
       });
   }, []);
-
-  // Socket.IO - connect to room for status + chat
-  useEffect(() => {
-    if (!taskId || !user) return;
-
-    socket = io(API_BASE, { withCredentials: true });
-
-    socket.emit('join', `chat-${taskId}`);
-
-    // Receive real-time status updates
-    socket.on('status-update', (data: { status: string }) => {
-      setBookingStatus(data.status);
-      if (data.status === 'completed') {
-        router.push('/customer/history');
-      }
-    });
-
-    // Receive new chat messages
-    socket.on('new-message', (message: ChatMessage) => {
-      setChats(prev => [...prev, message]);
-      scrollToBottom();
-    });
-
-    // Fetch initial chat history once
-    fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((data: ChatMessage[]) => setChats(Array.isArray(data) ? data : []))
-      .catch(() => setChats([]));
-
-    return () => {
-      socket.emit('leave', `chat-${taskId}`);
-      socket.disconnect();
-    };
-  }, [taskId, user, router]);
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
