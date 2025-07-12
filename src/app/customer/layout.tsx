@@ -18,7 +18,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   // Fetch /auth/me
   useEffect(() => {
-    fetch(`${API_BASE}/auth/me`, {
+    fetch(`${API_BASE}/auth/token`, {
       credentials: 'include',
     })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
