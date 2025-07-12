@@ -1,55 +1,46 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { io, Socket } from 'socket.io-client';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+
+let socket: Socket;
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const [serviceOnline, setServiceOnline] = useState<boolean | null>(null);
   const [showOverlay, setShowOverlay] = useState(true);
-  const previousStatus = useRef<boolean | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const checkServiceStatus = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/service-status`, { cache: 'no-store' });
-        const data = await res.json();
-        const isOnline = data.isOnline;
+    socket = io(API_BASE, {
+      withCredentials: true,
+    });
 
-        console.log('📡 Service status:', isOnline);
+    socket.on('connect', () => {
+      console.log('🟢 Connected to Socket.IO');
+    });
 
-        // Only update UI if status changed
-        if (previousStatus.current !== isOnline) {
-          previousStatus.current = isOnline;
-          setServiceOnline(isOnline);
-          setShowOverlay(true);
-
-          if (isOnline) {
-            setTimeout(() => setShowOverlay(false), 2000);
-          }
-        }
-      } catch (err) {
-        console.error('❌ Error checking service status:', err);
-
-        if (previousStatus.current !== false) {
-          previousStatus.current = false;
-          setServiceOnline(false);
-          setShowOverlay(true);
-        }
+    socket.on('serviceStatusUpdate', ({ isOnline }: { isOnline: boolean }) => {
+      console.log('📡 Received service status update:', isOnline);
+      setServiceOnline(isOnline);
+      setShowOverlay(true);
+      if (isOnline) {
+        setTimeout(() => setShowOverlay(false), 2000);
       }
+    });
+
+    socket.on('disconnect', () => {
+      console.warn('🔌 Disconnected from Socket.IO');
+    });
+
+    return () => {
+      socket.disconnect();
     };
-
-    checkServiceStatus(); // initial run
-    const interval = setInterval(checkServiceStatus, 60000); // ✅ 60 seconds
-
-    return () => clearInterval(interval);
   }, []);
 
   const handleRetry = () => {
-    previousStatus.current = null;
-    setServiceOnline(null);
     setShowOverlay(true);
   };
 
@@ -68,14 +59,10 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           {serviceOnline === null ? (
             <p className="text-base text-gray-600 animate-fade-in">Checking service status...</p>
           ) : serviceOnline ? (
-            <p className="text-lg font-semibold text-green-600 animate-bounce-in">
-              Service is Online
-            </p>
+            <p className="text-lg font-semibold text-green-600 animate-bounce-in">Service is Online</p>
           ) : (
             <>
-              <p className="text-lg font-semibold text-red-600 animate-bounce-in">
-                Service is Offline
-              </p>
+              <p className="text-lg font-semibold text-red-600 animate-bounce-in">Service is Offline</p>
               <p className="text-sm text-gray-500 mt-2 animate-fade-in">Please try again later.</p>
 
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
