@@ -11,16 +11,17 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   useEffect(() => {
     async function checkAuth() {
-      // Load tokens from localStorage into memory once on mount
+      console.log('🔄 ProtectedRoute: loading tokens from localStorage...');
       loadTokensFromStorage();
 
+      console.log('🔍 ProtectedRoute: checking current user...');
       const user: AuthUser | null = await getCurrentUser();
 
       if (!user) {
-        console.warn('⛔ No user found, redirecting to /login...');
+        console.warn('⛔ ProtectedRoute: No user found, redirecting to /login...');
         router.replace('/login');
       } else {
-        console.log('✅ User authenticated:', user);
+        console.log('✅ ProtectedRoute: User authenticated:', user);
         setLoading(false); // Auth OK, render children
       }
     }

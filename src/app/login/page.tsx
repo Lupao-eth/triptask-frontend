@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { setTokens } from '@/lib/api'; // <-- directly set tokens into memory
+import { setTokens } from '@/lib/api'; // directly set tokens in memory
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -43,7 +43,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Save tokens to localStorage only if rememberMe checked
+      // Save tokens in localStorage only if rememberMe checked
       if (rememberMe) {
         try {
           localStorage.setItem('triptask_token', data.token);
@@ -53,22 +53,27 @@ export default function LoginPage() {
         } catch (err) {
           console.warn('⚠️ Failed to save tokens to localStorage:', err);
         }
+      } else {
+        // Clear tokens from localStorage if "Remember Me" unchecked
+        try {
+          localStorage.removeItem('triptask_token');
+          localStorage.removeItem('triptask_refresh_token');
+        } catch {}
       }
 
-      // Immediately set tokens into memory for API calls
+      // Immediately set tokens into memory (for API calls)
       setTokens({
         access: data.token,
         refresh: data.refreshToken,
       });
 
-      // Decode JWT payload to get role
+      // Decode JWT to get role for redirect
       const payloadBase64 = data.token.split('.')[1];
       const decoded = JSON.parse(atob(payloadBase64));
       const role = decoded.role;
 
       setMessage('✅ Login successful! Redirecting...');
 
-      // Redirect based on user role
       if (role === 'rider') {
         router.push('/rider/dashboard');
       } else if (role === 'customer') {

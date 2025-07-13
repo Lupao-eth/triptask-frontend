@@ -11,19 +11,26 @@ let refreshToken: string | null = null;
 export const setTokens = (tokens: { access: string; refresh: string | null }) => {
   accessToken = tokens.access;
   refreshToken = tokens.refresh;
+  console.log('🔐 setTokens called:', { accessToken, refreshToken });
 };
 
 /**
  * Get current access token from memory
  * @returns access token or null if not set
  */
-export const getAccessToken = (): string | null => accessToken;
+export const getAccessToken = (): string | null => {
+  console.log('🔑 getAccessToken called, returning:', accessToken);
+  return accessToken;
+};
 
 /**
  * Get current refresh token from memory
  * @returns refresh token or null if not set
  */
-export const getRefreshToken = (): string | null => refreshToken;
+export const getRefreshToken = (): string | null => {
+  console.log('🔑 getRefreshToken called, returning:', refreshToken);
+  return refreshToken;
+};
 
 /**
  * Clear both tokens from memory (used on logout)
@@ -31,4 +38,5 @@ export const getRefreshToken = (): string | null => refreshToken;
 export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
+  console.log('🚪 clearTokens called, tokens cleared');
 };

@@ -30,6 +30,7 @@ interface ErrorResponse {
 export function setTokens(tokens: { access: string; refresh?: string }) {
   accessToken = tokens.access;
   refreshToken = tokens.refresh || null;
+  console.log('🔐 setTokens:', { accessToken, refreshToken });
 }
 
 /**
@@ -39,11 +40,12 @@ export function loadTokensFromStorage() {
   try {
     const storedToken = localStorage.getItem('triptask_token');
     const storedRefresh = localStorage.getItem('triptask_refresh_token');
+    console.log('📦 loadTokensFromStorage:', { storedToken, storedRefresh });
     if (storedToken) {
       setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
     }
-  } catch {
-    // localStorage might be unavailable (SSR, private mode)
+  } catch (err) {
+    console.warn('⚠️ loadTokensFromStorage failed:', err);
   }
 }
 
@@ -51,6 +53,7 @@ export function loadTokensFromStorage() {
  * Get current access token in memory
  */
 export function getAccessToken(): string | null {
+  console.log('🔑 getAccessToken:', accessToken);
   return accessToken;
 }
 
@@ -58,6 +61,7 @@ export function getAccessToken(): string | null {
  * Get current refresh token in memory
  */
 export function getRefreshToken(): string | null {
+  console.log('🔑 getRefreshToken:', refreshToken);
   return refreshToken;
 }
 
@@ -67,10 +71,13 @@ export function getRefreshToken(): string | null {
 export function logoutUser() {
   accessToken = null;
   refreshToken = null;
+  console.log('🚪 logoutUser: tokens cleared');
   try {
     localStorage.removeItem('triptask_token');
     localStorage.removeItem('triptask_refresh_token');
-  } catch {}
+  } catch (err) {
+    console.warn('⚠️ logoutUser localStorage removal failed:', err);
+  }
 }
 
 /**
@@ -78,9 +85,13 @@ export function logoutUser() {
  * Returns true if refresh succeeded and updated token, false otherwise
  */
 async function refreshAccessToken(): Promise<boolean> {
-  if (!refreshToken) return false;
+  if (!refreshToken) {
+    console.warn('⚠️ refreshAccessToken: no refreshToken available');
+    return false;
+  }
 
   try {
+    console.log('🔄 refreshAccessToken: sending refresh request...');
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       headers: {
@@ -90,21 +101,26 @@ async function refreshAccessToken(): Promise<boolean> {
     });
 
     if (!res.ok) {
+      console.warn(`⚠️ refreshAccessToken failed with status ${res.status}`);
       logoutUser();
       return false;
     }
 
     const data: { token: string } = await res.json();
+    console.log('🔄 refreshAccessToken response:', data);
 
     if (data.token) {
       accessToken = data.token;
       try {
         localStorage.setItem('triptask_token', data.token);
-      } catch {}
+        console.log('🔄 refreshAccessToken: new token saved to localStorage');
+      } catch (err) {
+        console.warn('⚠️ refreshAccessToken localStorage set failed:', err);
+      }
       return true;
     }
   } catch (err) {
-    console.error('❌ Failed to refresh token:', err);
+    console.error('❌ refreshAccessToken error:', err);
   }
 
   logoutUser();
@@ -118,11 +134,12 @@ async function refreshAccessToken(): Promise<boolean> {
 export async function getCurrentUser(): Promise<AuthUser | null> {
   let token = getAccessToken();
   if (!token) {
-    console.warn('⚠️ No access token available');
+    console.warn('⚠️ getCurrentUser: No access token available');
     return null;
   }
 
   try {
+    console.log('🔍 getCurrentUser: fetching /auth/me with token:', token);
     let res = await fetch(`${API_BASE}/auth/me`, {
       method: 'GET',
       headers: {
@@ -131,27 +148,33 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     });
 
     if (res.status === 401) {
+      console.warn('⚠️ getCurrentUser: 401 Unauthorized, trying to refresh token...');
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         token = getAccessToken();
+        console.log('🔍 getCurrentUser: retrying /auth/me with refreshed token:', token);
         res = await fetch(`${API_BASE}/auth/me`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
+      } else {
+        console.warn('⚠️ getCurrentUser: token refresh failed');
+        return null;
       }
     }
 
     if (!res.ok) {
-      console.warn(`⚠️ /auth/me failed with status ${res.status}`);
+      console.warn(`⚠️ getCurrentUser: /auth/me failed with status ${res.status}`);
       return null;
     }
 
     const data: MeResponse = await res.json();
+    console.log('✅ getCurrentUser: user data received:', data.user);
     return data.user || null;
   } catch (err) {
-    console.error('❌ Error fetching current user:', err);
+    console.error('❌ getCurrentUser error:', err);
     return null;
   }
 }
@@ -166,6 +189,7 @@ export async function loginUser(
   rememberMe = false
 ): Promise<{ user: AuthUser; token: string; refreshToken?: string }> {
   try {
+    console.log('🔐 loginUser: logging in with email:', email);
     const res = await fetch(`${API_BASE}/auth/token`, {
       method: 'POST',
       headers: {
@@ -175,6 +199,7 @@ export async function loginUser(
     });
 
     const data = await res.json();
+    console.log('🔐 loginUser response:', data);
 
     if (!res.ok) {
       const errorMessage =
@@ -195,13 +220,18 @@ export async function loginUser(
     if (rememberMe) {
       try {
         localStorage.setItem('triptask_token', token);
-        if (refreshToken) localStorage.setItem('triptask_refresh_token', refreshToken);
-      } catch {}
+        if (refreshToken) {
+          localStorage.setItem('triptask_refresh_token', refreshToken);
+        }
+        console.log('🔐 loginUser: tokens saved to localStorage');
+      } catch (err) {
+        console.warn('⚠️ loginUser localStorage set failed:', err);
+      }
     }
 
     return { user, token, refreshToken };
   } catch (err) {
-    console.error('❌ Login error:', err);
+    console.error('❌ loginUser error:', err);
     throw err;
   }
 }
