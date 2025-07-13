@@ -40,6 +40,7 @@ export default function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [chats, setChats] = useState<ChatMessage[]>([]);
+  const [sending, setSending] = useState(false);
   const [newText, setNewText] = useState('');
   const [riderName, setRiderName] = useState('');
   const [bookingStatus, setBookingStatus] = useState('Loading...');
@@ -143,49 +144,58 @@ export default function ChatPage() {
   };
 
   const sendMessage = async () => {
-    const token = getAccessToken();
-    if (!taskId || !user?.name || !token || (!newText.trim() && selectedFiles.length === 0)) return;
+  if (sending) return; // prevent multiple sends
+  setSending(true); // start loading
 
-    const uploadedUrls: FileMeta[] = [];
+  const token = getAccessToken();
+  if (!taskId || !user?.name || !token || (!newText.trim() && selectedFiles.length === 0)) {
+    setSending(false);
+    return;
+  }
 
-    for (const file of selectedFiles) {
-      const formData = new FormData();
-      formData.append('file', file);
-      try {
-        const res = await fetch(`${API_BASE}/chats/upload`, {
-          method: 'POST',
-          body: formData,
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const result = await res.json();
-        uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
-      } catch (error) {
-        console.error('❌ Upload error:', error);
-      }
-    }
+  const uploadedUrls: FileMeta[] = [];
 
+  for (const file of selectedFiles) {
+    const formData = new FormData();
+    formData.append('file', file);
     try {
-      await fetch(`${API_BASE}/chats`, {
+      const res = await fetch(`${API_BASE}/chats/upload`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          taskId,
-          sender: user.name,
-          text: newText.trim(),
-          fileUrls: uploadedUrls, // camelCase
-        }),
+        body: formData,
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      setNewText('');
-      setSelectedFiles([]);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (err) {
-      console.error('❌ Error sending chat:', err);
+      const result = await res.json();
+      uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
+    } catch (error) {
+      console.error('❌ Upload error:', error);
     }
-  };
+  }
+
+  try {
+    await fetch(`${API_BASE}/chats`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        taskId,
+        sender: user.name,
+        text: newText.trim(),
+        fileUrls: uploadedUrls,
+      }),
+    });
+
+    setNewText('');
+    setSelectedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  } catch (err) {
+    console.error('❌ Error sending chat:', err);
+  }
+
+  setSending(false); // end loading
+};
+
 
   return (
     <main className="flex flex-col h-screen bg-white font-mono">
@@ -343,7 +353,7 @@ export default function ChatPage() {
           </label>
           <label className="cursor-pointer">
             <PaperClipIcon className="w-6 h-6 text-gray-600" />
-            <input type="file" multiple onChange={handleFileChange} className="hidden" />
+            <input type="file" multiple onChange={handleFileChange} className="hidden" disabled={sending} />
           </label>
           <div className="flex-1">
             <input
@@ -355,11 +365,34 @@ export default function ChatPage() {
             />
           </div>
           <button
-            onClick={sendMessage}
-            className="text-white bg-orange-500 p-2 rounded-full hover:bg-orange-600"
-          >
-            <PaperAirplaneIcon className="w-5 h-5 rotate-45" />
-          </button>
+  onClick={sendMessage}
+  disabled={sending}
+  className={`text-white p-2 rounded-full ${
+    sending ? 'bg-orange-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600'
+  }`}
+>
+  {sending ? (
+    <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
+      <circle
+        className="opacity-25"
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="currentColor"
+        strokeWidth="4"
+        fill="none"
+      />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8v8z"
+      />
+    </svg>
+  ) : (
+    <PaperAirplaneIcon className="w-5 h-5 rotate-45" />
+  )}
+</button>
+
         </div>
       </div>
     </main>
