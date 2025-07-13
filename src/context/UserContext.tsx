@@ -4,6 +4,7 @@ import {
   getCurrentUser,
   loadTokensFromStorage,
   logoutUser,
+  getAccessToken,
 } from '../lib/api';
 import { createContext, useContext, useEffect, useState } from 'react';
 
@@ -38,7 +39,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const init = async () => {
       try {
+        // ✅ 1. Load tokens from storage
         loadTokensFromStorage();
+        const token = getAccessToken();
+        console.log('🔍 getCurrentUser: using access token →', token);
+
+        if (!token) {
+          console.warn('🚫 No access token found during init');
+          logout();
+          return;
+        }
+
+        // ✅ 2. Fetch current user
         const u = await getCurrentUser();
 
         if (u && (u.role === 'rider' || u.role === 'customer')) {
