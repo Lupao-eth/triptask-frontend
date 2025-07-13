@@ -182,7 +182,7 @@ export default function ChatPage() {
           taskId,
           sender: user.name,
           text: newText.trim(),
-          fileUrls: uploadedUrls,
+          file_urls: uploadedUrls,
         }),
       });
     } catch (err) {
