@@ -25,7 +25,7 @@ interface ErrorResponse {
 }
 
 /**
- * Set access and refresh tokens
+ * Set access and refresh tokens in memory
  */
 export function setTokens(tokens: { access: string; refresh: string }) {
   accessToken = tokens.access;
@@ -33,42 +33,49 @@ export function setTokens(tokens: { access: string; refresh: string }) {
 }
 
 /**
- * Load tokens from localStorage (on first load)
+ * Load tokens from localStorage (called on app init)
  */
 export function loadTokensFromStorage() {
-  const storedToken = localStorage.getItem('triptask_token');
-  const storedRefresh = localStorage.getItem('triptask_refresh_token');
-  if (storedToken && storedRefresh) {
-    setTokens({ access: storedToken, refresh: storedRefresh });
+  try {
+    const storedToken = localStorage.getItem('triptask_token');
+    const storedRefresh = localStorage.getItem('triptask_refresh_token');
+    if (storedToken && storedRefresh) {
+      setTokens({ access: storedToken, refresh: storedRefresh });
+    }
+  } catch {
+    // localStorage might be unavailable (e.g. SSR or private mode)
   }
 }
 
 /**
- * Get access token
+ * Get current access token in memory
  */
 export function getAccessToken(): string | null {
   return accessToken;
 }
 
 /**
- * Get refresh token
+ * Get current refresh token in memory
  */
 export function getRefreshToken(): string | null {
   return refreshToken;
 }
 
 /**
- * Clear both tokens (logout)
+ * Clear tokens from memory and localStorage (logout)
  */
 export function logoutUser() {
   accessToken = null;
   refreshToken = null;
-  localStorage.removeItem('triptask_token');
-  localStorage.removeItem('triptask_refresh_token');
+  try {
+    localStorage.removeItem('triptask_token');
+    localStorage.removeItem('triptask_refresh_token');
+  } catch {}
 }
 
 /**
- * Refresh access token using refreshToken
+ * Refresh access token using refresh token
+ * Returns true if refresh succeeded and updated token, false otherwise
  */
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshToken) return false;
@@ -82,11 +89,18 @@ async function refreshAccessToken(): Promise<boolean> {
       body: JSON.stringify({ refreshToken }),
     });
 
+    if (!res.ok) {
+      logoutUser();
+      return false;
+    }
+
     const data: { token: string } = await res.json();
 
-    if (res.ok && data.token) {
+    if (data.token) {
       accessToken = data.token;
-      localStorage.setItem('triptask_token', data.token); // 🔐 update localStorage
+      try {
+        localStorage.setItem('triptask_token', data.token);
+      } catch {}
       return true;
     }
   } catch (err) {
@@ -98,8 +112,8 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 /**
- * Get the current authenticated user using Bearer token
- * Auto-retries once if token is expired and refresh works
+ * Fetch current authenticated user info using Bearer token
+ * Retries once if token expired and refresh succeeds
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   let token = getAccessToken();
@@ -143,7 +157,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 }
 
 /**
- * Login user and store access + refresh tokens
+ * Login user with email and password
+ * Stores tokens in memory and optionally in localStorage (if rememberMe)
  */
 export async function loginUser(
   email: string,
@@ -178,8 +193,10 @@ export async function loginUser(
     setTokens({ access: token, refresh: refreshToken });
 
     if (rememberMe) {
-      localStorage.setItem('triptask_token', token);
-      localStorage.setItem('triptask_refresh_token', refreshToken);
+      try {
+        localStorage.setItem('triptask_token', token);
+        localStorage.setItem('triptask_refresh_token', refreshToken);
+      } catch {}
     }
 
     return { user, token, refreshToken };

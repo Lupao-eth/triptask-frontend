@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/lib/api';
+import { getCurrentUser, loadTokensFromStorage } from '@/lib/api';
 import type { AuthUser } from '@/lib/api';
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -11,6 +11,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   useEffect(() => {
     async function checkAuth() {
+      // Load tokens from localStorage into memory before checking auth
+      loadTokensFromStorage();
+
       const user: AuthUser | null = await getCurrentUser();
       console.log('🔐 ProtectedRoute user:', user);
 

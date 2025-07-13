@@ -1,11 +1,7 @@
-'use client';
-
-import { useEffect } from 'react';
+// src/app/layout.tsx
 import { Geist, Geist_Mono } from 'next/font/google';
-import { Toaster } from 'react-hot-toast';
 import './globals.css';
-import { UserProvider } from '@/context/UserContext';
-import { loadTokensFromStorage } from '@/lib/api';
+import RootLayoutClient from './layout-client';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -19,31 +15,15 @@ const geistMono = Geist_Mono({
   display: 'swap',
 });
 
-export default function RootLayoutClient({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  useEffect(() => {
-    loadTokensFromStorage();
-  }, []);
+export const metadata = {
+  title: 'TripTask',
+  description: 'Your booking assistant',
+};
 
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <body
-      className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-black`}
-    >
-      <UserProvider>
-        {children}
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              fontFamily: 'var(--font-geist-mono)',
-            },
-          }}
-        />
-      </UserProvider>
-    </body>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <RootLayoutClient>{children}</RootLayoutClient>
+    </html>
   );
 }
