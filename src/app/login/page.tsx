@@ -27,6 +27,7 @@ export default function LoginPage() {
     setMessage('🔐 Logging in...');
 
     try {
+      console.log('🔐 LoginPage: sending login request for', email);
       const res = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
         headers: {
@@ -36,6 +37,7 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
+      console.log('🔐 LoginPage: login response', data);
 
       if (!res.ok || !data.token) {
         setMessage(`❌ ${data.message || 'Login failed. Try again.'}`);
@@ -43,31 +45,40 @@ export default function LoginPage() {
         return;
       }
 
-      // Save tokens in localStorage only if rememberMe checked
+      // Set tokens in memory immediately
+      setTokens({
+        access: data.token,
+        refresh: data.refreshToken,
+      });
+
       if (rememberMe) {
         try {
           localStorage.setItem('triptask_token', data.token);
           if (data.refreshToken) {
             localStorage.setItem('triptask_refresh_token', data.refreshToken);
           }
+          console.log('🔐 LoginPage: tokens saved to localStorage');
         } catch (err) {
           console.warn('⚠️ Failed to save tokens to localStorage:', err);
         }
       } else {
-        // Clear tokens from localStorage if "Remember Me" unchecked
+        try {
+          sessionStorage.setItem('triptask_token', data.token);
+          if (data.refreshToken) {
+            sessionStorage.setItem('triptask_refresh_token', data.refreshToken);
+          }
+          console.log('🔐 LoginPage: tokens saved to sessionStorage');
+        } catch (err) {
+          console.warn('⚠️ Failed to save tokens to sessionStorage:', err);
+        }
+        // Clear localStorage tokens if present
         try {
           localStorage.removeItem('triptask_token');
           localStorage.removeItem('triptask_refresh_token');
         } catch {}
       }
 
-      // Immediately set tokens into memory (for API calls)
-      setTokens({
-        access: data.token,
-        refresh: data.refreshToken,
-      });
-
-      // Decode JWT to get role for redirect
+      // Decode JWT payload to get role
       const payloadBase64 = data.token.split('.')[1];
       const decoded = JSON.parse(atob(payloadBase64));
       const role = decoded.role;
@@ -78,11 +89,13 @@ export default function LoginPage() {
         router.push('/rider/dashboard');
       } else if (role === 'customer') {
         router.push('/customer/dashboard');
+      } else if (role === 'admin') {
+        router.push('/admin/dashboard');
       } else {
         router.push('/');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('❌ LoginPage error:', err);
       setMessage('❌ Something went wrong. Please try again.');
     } finally {
       setLoading(false);

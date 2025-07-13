@@ -8,9 +8,9 @@ let refreshToken: string | null = null;
  * Set both access and refresh tokens in memory
  * @param tokens Object containing access and refresh tokens
  */
-export const setTokens = (tokens: { access: string; refresh: string | null }) => {
+export const setTokens = (tokens: { access: string; refresh: string | null | undefined }) => {
   accessToken = tokens.access;
-  refreshToken = tokens.refresh;
+  refreshToken = tokens.refresh ?? null;
   console.log('🔐 setTokens called:', { accessToken, refreshToken });
 };
 
