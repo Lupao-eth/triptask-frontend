@@ -24,19 +24,30 @@ export default function LoginPage() {
 
     try {
       const user = await loginUser(email, password, rememberMe);
-      console.log('Logged in user:', user);
+      console.log('🔐 Login response:', user);
 
       if (user) {
-        setMessage('Logged in successfully! Redirecting...');
+        // ✅ Check if session is really established
+        const check = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/me`, {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-        const redirectTo =
-          user.role === 'rider'
-            ? '/rider/dashboard'
-            : '/customer/dashboard';
+        if (check.ok) {
+          setMessage('✅ Login & session established! Redirecting...');
 
-        setTimeout(() => {
-          window.location.href = redirectTo;
-        }, 300);
+          const redirectTo =
+            user.role === 'rider'
+              ? '/rider/dashboard'
+              : '/customer/dashboard';
+
+          setTimeout(() => {
+            window.location.href = redirectTo;
+          }, 300);
+        } else {
+          setMessage('⚠️ Login succeeded but session not established.');
+          console.warn('⚠️ Session cookie not working. Check cross-site cookie settings.');
+        }
       } else {
         setMessage('❌ Login failed. Please try again.');
       }
