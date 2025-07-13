@@ -88,9 +88,18 @@ export default function ChatPage() {
         });
 
         // Step 4: Fetch chat history
-        const chatRes = await fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' });
-        const chatData = await chatRes.json();
-        setChats(Array.isArray(chatData) ? chatData : []);
+const chatRes = await fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' });
+const chatData = await chatRes.json();
+setChats(Array.isArray(chatData) ? chatData : []);
+
+// ✅ Fetch initial task status
+const taskRes = await fetch(`${API_BASE}/tasks/${taskId}`, { credentials: 'include' });
+if (taskRes.ok) {
+  const task = await taskRes.json();
+  setBookingStatus(task.status);
+} else {
+  console.warn('❌ Failed to fetch task status');
+}
       })
       .catch(() => router.push('/login'));
 
