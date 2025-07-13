@@ -32,7 +32,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   if (loading) {
     return (
       <div className="p-4 text-center text-yellow-700 font-mono">
-        🔐 Checking authentication...
+        Checking authentication...
       </div>
     );
   }

@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { loadTokensFromStorage } from '@/lib/api'; // ✅ important import
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false); // Optional
+  const [rememberMe, setRememberMe] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -41,28 +42,29 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Save access token to localStorage
+      // ✅ Save tokens to localStorage
       localStorage.setItem('triptask_token', data.token);
-
-      // (Optional: If your backend returns a refresh token too, store it)
       if (data.refreshToken && rememberMe) {
         localStorage.setItem('triptask_refresh_token', data.refreshToken);
       }
 
-      // ✅ Decode the token to get user role
+      // ✅ Load tokens into memory immediately (for ProtectedRoute)
+      loadTokensFromStorage();
+
+      // ✅ Decode token to get role
       const decoded = JSON.parse(atob(data.token.split('.')[1]));
       const role = decoded.role;
 
       setMessage('✅ Login successful! Redirecting...');
-      setTimeout(() => {
-        if (role === 'rider') {
-          router.push('/rider/dashboard');
-        } else if (role === 'customer') {
-          router.push('/customer/dashboard');
-        } else {
-          router.push('/');
-        }
-      }, 300);
+
+      // ✅ Redirect immediately (no setTimeout)
+      if (role === 'rider') {
+        router.push('/rider/dashboard');
+      } else if (role === 'customer') {
+        router.push('/customer/dashboard');
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       console.error('Login error:', err);
       setMessage('❌ Something went wrong. Please try again.');
