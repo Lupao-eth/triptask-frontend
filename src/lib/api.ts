@@ -12,7 +12,7 @@ export interface AuthUser {
 
 interface LoginResponse {
   token: string;
-  refreshToken: string;
+  refreshToken?: string;
   user: AuthUser;
 }
 
@@ -27,9 +27,9 @@ interface ErrorResponse {
 /**
  * Set access and refresh tokens in memory
  */
-export function setTokens(tokens: { access: string; refresh: string }) {
+export function setTokens(tokens: { access: string; refresh?: string }) {
   accessToken = tokens.access;
-  refreshToken = tokens.refresh;
+  refreshToken = tokens.refresh || null;
 }
 
 /**
@@ -39,11 +39,11 @@ export function loadTokensFromStorage() {
   try {
     const storedToken = localStorage.getItem('triptask_token');
     const storedRefresh = localStorage.getItem('triptask_refresh_token');
-    if (storedToken && storedRefresh) {
-      setTokens({ access: storedToken, refresh: storedRefresh });
+    if (storedToken) {
+      setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
     }
   } catch {
-    // localStorage might be unavailable (e.g. SSR or private mode)
+    // localStorage might be unavailable (SSR, private mode)
   }
 }
 
@@ -164,14 +164,14 @@ export async function loginUser(
   email: string,
   password: string,
   rememberMe = false
-): Promise<{ user: AuthUser; token: string; refreshToken: string }> {
+): Promise<{ user: AuthUser; token: string; refreshToken?: string }> {
   try {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(`${API_BASE}/auth/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password, rememberMe }),
+      body: JSON.stringify({ email, password }),
     });
 
     const data = await res.json();
@@ -186,7 +186,7 @@ export async function loginUser(
 
     const { token, refreshToken, user } = data as LoginResponse;
 
-    if (!token || !refreshToken || !user) {
+    if (!token || !user) {
       throw new Error('Tokens or user data missing from login response');
     }
 
@@ -195,7 +195,7 @@ export async function loginUser(
     if (rememberMe) {
       try {
         localStorage.setItem('triptask_token', token);
-        localStorage.setItem('triptask_refresh_token', refreshToken);
+        if (refreshToken) localStorage.setItem('triptask_refresh_token', refreshToken);
       } catch {}
     }
 

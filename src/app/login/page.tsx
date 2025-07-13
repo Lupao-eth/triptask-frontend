@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { loadTokensFromStorage } from '@/lib/api'; // ✅ important import
+import { setTokens } from '@/lib/api'; // <-- directly set tokens into memory
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -39,25 +39,36 @@ export default function LoginPage() {
 
       if (!res.ok || !data.token) {
         setMessage(`❌ ${data.message || 'Login failed. Try again.'}`);
+        setLoading(false);
         return;
       }
 
-      // ✅ Save tokens to localStorage
-      localStorage.setItem('triptask_token', data.token);
-      if (data.refreshToken && rememberMe) {
-        localStorage.setItem('triptask_refresh_token', data.refreshToken);
+      // Save tokens to localStorage only if rememberMe checked
+      if (rememberMe) {
+        try {
+          localStorage.setItem('triptask_token', data.token);
+          if (data.refreshToken) {
+            localStorage.setItem('triptask_refresh_token', data.refreshToken);
+          }
+        } catch (err) {
+          console.warn('⚠️ Failed to save tokens to localStorage:', err);
+        }
       }
 
-      // ✅ Load tokens into memory immediately (for ProtectedRoute)
-      loadTokensFromStorage();
+      // Immediately set tokens into memory for API calls
+      setTokens({
+        access: data.token,
+        refresh: data.refreshToken,
+      });
 
-      // ✅ Decode token to get role
-      const decoded = JSON.parse(atob(data.token.split('.')[1]));
+      // Decode JWT payload to get role
+      const payloadBase64 = data.token.split('.')[1];
+      const decoded = JSON.parse(atob(payloadBase64));
       const role = decoded.role;
 
       setMessage('✅ Login successful! Redirecting...');
 
-      // ✅ Redirect immediately (no setTimeout)
+      // Redirect based on user role
       if (role === 'rider') {
         router.push('/rider/dashboard');
       } else if (role === 'customer') {
