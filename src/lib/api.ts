@@ -35,6 +35,7 @@ export function setTokens(tokens: { access: string; refresh?: string }) {
 
 /**
  * Load tokens from localStorage or sessionStorage (called on app init)
+ * Clears memory tokens if none found
  */
 export function loadTokensFromStorage() {
   try {
@@ -52,10 +53,14 @@ export function loadTokensFromStorage() {
     if (storedToken) {
       setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
     } else {
-      console.log('📦 loadTokensFromStorage: No tokens found in either storage');
+      console.log('📦 loadTokensFromStorage: No tokens found in either storage, clearing tokens');
+      accessToken = null;
+      refreshToken = null;
     }
   } catch (err) {
     console.warn('⚠️ loadTokensFromStorage failed:', err);
+    accessToken = null;
+    refreshToken = null;
   }
 }
 

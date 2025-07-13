@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getCurrentUser, loadTokensFromStorage } from '../lib/api';
+import { getCurrentUser, loadTokensFromStorage, logoutUser } from '../lib/api';
 
 export type User = {
   id: string;
@@ -10,34 +10,53 @@ export type User = {
   role: 'rider' | 'customer'; // ✅ Only support these roles
 };
 
-const UserContext = createContext<{
+type UserContextType = {
   user: User | null;
   loading: boolean;
-}>({
+  logout: () => void;
+};
+
+const UserContext = createContext<UserContextType>({
   user: null,
   loading: true,
+  logout: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Logout helper to clear tokens and user state
+  const logout = () => {
+    logoutUser(); // clears tokens from storage and memory
+    setUser(null);
+  };
+
   useEffect(() => {
-    loadTokensFromStorage();
+    try {
+      loadTokensFromStorage();
+    } catch (err) {
+      console.warn('⚠️ loadTokensFromStorage threw error:', err);
+    }
 
-    getCurrentUser().then((u) => {
-      console.log('📦 Context received user:', u);
+    getCurrentUser()
+      .then((u) => {
+        console.log('📦 Context received user:', u);
 
-      // ✅ Only accept rider or customer roles
-      if (u && (u.role === 'rider' || u.role === 'customer')) {
-        setUser(u as User);
-      } else {
-        console.warn('🚫 Invalid role:', u?.role);
+        if (u && (u.role === 'rider' || u.role === 'customer')) {
+          setUser(u as User);
+        } else {
+          console.warn('🚫 Invalid role:', u?.role);
+          setUser(null);
+        }
+      })
+      .catch((err) => {
+        console.error('❌ getCurrentUser failed in UserContext:', err);
         setUser(null);
-      }
-
-      setLoading(false);
-    });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
@@ -52,7 +71,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, loading }}>
+    <UserContext.Provider value={{ user, loading, logout }}>
       {children}
     </UserContext.Provider>
   );

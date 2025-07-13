@@ -11,18 +11,23 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   useEffect(() => {
     async function checkAuth() {
-      console.log('🔄 ProtectedRoute: loading tokens from storage...');
-      loadTokensFromStorage();
+      try {
+        console.log('🔄 ProtectedRoute: loading tokens from storage...');
+        loadTokensFromStorage();
 
-      console.log('🔍 ProtectedRoute: checking current user...');
-      const user: AuthUser | null = await getCurrentUser();
+        console.log('🔍 ProtectedRoute: checking current user...');
+        const user: AuthUser | null = await getCurrentUser();
 
-      if (!user) {
-        console.warn('⛔ ProtectedRoute: No user found, redirecting to /login...');
+        if (!user) {
+          console.warn('⛔ ProtectedRoute: No user found, redirecting to /login...');
+          router.replace('/login');
+        } else {
+          console.log('✅ ProtectedRoute: User authenticated:', user);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('❌ ProtectedRoute error:', err);
         router.replace('/login');
-      } else {
-        console.log('✅ ProtectedRoute: User authenticated:', user);
-        setLoading(false);
       }
     }
 

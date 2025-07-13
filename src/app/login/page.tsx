@@ -17,6 +17,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // prevent double submit
 
     if (!email || !password) {
       setMessage('❗ Please fill in all fields.');
@@ -30,9 +31,7 @@ export default function LoginPage() {
       console.log('🔐 LoginPage: sending login request for', email);
       const res = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
@@ -52,30 +51,33 @@ export default function LoginPage() {
       });
 
       if (rememberMe) {
+        // Save tokens persistently to localStorage
         try {
           localStorage.setItem('triptask_token', data.token);
           if (data.refreshToken) {
             localStorage.setItem('triptask_refresh_token', data.refreshToken);
           }
-          console.log('🔐 LoginPage: tokens saved to localStorage');
+          // Clear sessionStorage tokens if any
+          sessionStorage.removeItem('triptask_token');
+          sessionStorage.removeItem('triptask_refresh_token');
+          console.log('🔐 LoginPage: tokens saved to localStorage and sessionStorage cleared');
         } catch (err) {
           console.warn('⚠️ Failed to save tokens to localStorage:', err);
         }
       } else {
+        // Save tokens to sessionStorage only
         try {
           sessionStorage.setItem('triptask_token', data.token);
           if (data.refreshToken) {
             sessionStorage.setItem('triptask_refresh_token', data.refreshToken);
           }
-          console.log('🔐 LoginPage: tokens saved to sessionStorage');
+          // Clear localStorage tokens if any
+          localStorage.removeItem('triptask_token');
+          localStorage.removeItem('triptask_refresh_token');
+          console.log('🔐 LoginPage: tokens saved to sessionStorage and localStorage cleared');
         } catch (err) {
           console.warn('⚠️ Failed to save tokens to sessionStorage:', err);
         }
-        // Clear localStorage tokens if present
-        try {
-          localStorage.removeItem('triptask_token');
-          localStorage.removeItem('triptask_refresh_token');
-        } catch {}
       }
 
       // Decode JWT payload to get role
@@ -113,27 +115,37 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4" noValidate>
           <div>
-            <label className="block mb-1 font-medium">Email</label>
+            <label className="block mb-1 font-medium" htmlFor="email">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
               placeholder="e.g. user@email.com"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-2 border border-yellow-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              autoComplete="email"
+              disabled={loading}
             />
           </div>
           <div>
-            <label className="block mb-1 font-medium">Password</label>
+            <label className="block mb-1 font-medium" htmlFor="password">
+              Password
+            </label>
             <input
+              id="password"
               type="password"
               placeholder="Enter your password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border border-yellow-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              autoComplete="current-password"
+              disabled={loading}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -143,8 +155,9 @@ export default function LoginPage() {
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
               className="h-4 w-4 text-yellow-500 border-yellow-300 rounded focus:ring-yellow-400"
+              disabled={loading}
             />
-            <label htmlFor="remember" className="text-sm">
+            <label htmlFor="remember" className="text-sm select-none">
               Remember Me
             </label>
           </div>
