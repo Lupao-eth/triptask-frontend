@@ -26,7 +26,7 @@ export default function LoginPage() {
     setMessage('🔐 Logging in...');
 
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
