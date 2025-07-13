@@ -60,7 +60,7 @@ export const loadTokensFromStorage = () => {
     }
 
     if (storedToken) {
-      setTokens({ access: storedToken, refresh: storedRefresh });
+      setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
       console.log('📦 loadTokensFromStorage: Tokens loaded into memory.');
     } else {
       console.log('📦 loadTokensFromStorage: No tokens found in either storage.');

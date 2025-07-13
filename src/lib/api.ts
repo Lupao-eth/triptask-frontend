@@ -27,9 +27,9 @@ interface ErrorResponse {
 /**
  * Set access and refresh tokens in memory
  */
-export function setTokens(tokens: { access: string; refresh?: string }) {
+export function setTokens(tokens: { access: string; refresh?: string | null }) {
   accessToken = tokens.access;
-  refreshToken = tokens.refresh || null;
+  refreshToken = tokens.refresh ?? null;
   console.log('🔐 setTokens:', { accessToken, refreshToken });
 }
 
@@ -51,7 +51,7 @@ export function loadTokensFromStorage() {
     console.log('📦 loadTokensFromStorage:', { storedToken, storedRefresh });
 
     if (storedToken) {
-      setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
+      setTokens({ access: storedToken, refresh: storedRefresh ?? null });
     } else {
       console.log('📦 loadTokensFromStorage: No tokens found in either storage, clearing tokens');
       accessToken = null;

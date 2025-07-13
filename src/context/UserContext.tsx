@@ -34,7 +34,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      loadTokensFromStorage();
+      loadTokensFromStorage(); // Load tokens from storage once on app init
     } catch (err) {
       console.warn('⚠️ loadTokensFromStorage threw error:', err);
     }

@@ -10,6 +10,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const router = useRouter();
 
   useEffect(() => {
+    let cancelled = false;
+
     async function checkAuth() {
       try {
         console.log('🔄 ProtectedRoute: loading tokens from storage...');
@@ -17,6 +19,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
         console.log('🔍 ProtectedRoute: checking current user...');
         const user: AuthUser | null = await getCurrentUser();
+
+        if (cancelled) return;
 
         if (!user) {
           console.warn('⛔ ProtectedRoute: No user found, redirecting to /login...');
@@ -27,11 +31,17 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         }
       } catch (err) {
         console.error('❌ ProtectedRoute error:', err);
-        router.replace('/login');
+        if (!cancelled) {
+          router.replace('/login');
+        }
       }
     }
 
     checkAuth();
+
+    return () => {
+      cancelled = true; // avoid state update if unmounted early
+    };
   }, [router]);
 
   if (loading) {

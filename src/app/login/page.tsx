@@ -50,8 +50,8 @@ export default function LoginPage() {
         refresh: data.refreshToken,
       });
 
+      // Store tokens based on rememberMe choice
       if (rememberMe) {
-        // Save tokens persistently to localStorage
         try {
           localStorage.setItem('triptask_token', data.token);
           if (data.refreshToken) {
@@ -65,7 +65,6 @@ export default function LoginPage() {
           console.warn('⚠️ Failed to save tokens to localStorage:', err);
         }
       } else {
-        // Save tokens to sessionStorage only
         try {
           sessionStorage.setItem('triptask_token', data.token);
           if (data.refreshToken) {
@@ -80,13 +79,14 @@ export default function LoginPage() {
         }
       }
 
-      // Decode JWT payload to get role
+      // Decode JWT payload to get role (careful with base64 decode)
       const payloadBase64 = data.token.split('.')[1];
       const decoded = JSON.parse(atob(payloadBase64));
       const role = decoded.role;
 
       setMessage('✅ Login successful! Redirecting...');
 
+      // Redirect based on role
       if (role === 'rider') {
         router.push('/rider/dashboard');
       } else if (role === 'customer') {
