@@ -12,19 +12,21 @@ export type User = {
   id: string;
   email: string;
   name?: string;
-  role: 'rider' | 'customer';
+  role: 'rider' | 'customer' | 'admin';
 };
 
 type UserContextType = {
   user: User | null;
   loading: boolean;
   logout: () => void;
+  setUser: (user: User | null) => void;
 };
 
 const UserContext = createContext<UserContextType>({
   user: null,
   loading: true,
   logout: () => {},
+  setUser: () => {},
 });
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -32,15 +34,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const logout = () => {
-    logoutUser();
+    logoutUser(); // Clears tokens
     setUser(null);
   };
 
   useEffect(() => {
     const init = async () => {
       try {
-        // ✅ 1. Load tokens from storage
-        loadTokensFromStorage();
+        loadTokensFromStorage(); // Loads from localStorage/sessionStorage into memory
         const token = getAccessToken();
         console.log('🔍 getCurrentUser: using access token →', token);
 
@@ -50,10 +51,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // ✅ 2. Fetch current user
         const u = await getCurrentUser();
 
-        if (u && (u.role === 'rider' || u.role === 'customer')) {
+        if (u && u.id && u.email && u.role) {
           const safeUser: User = {
             id: u.id,
             email: u.email,
@@ -63,7 +63,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setUser(safeUser);
           console.log('✅ UserContext loaded user:', safeUser);
         } else {
-          console.warn('🚫 Invalid or missing user role:', u?.role);
+          console.warn('🚫 Invalid or missing user info:', u);
           logout();
         }
       } catch (err) {
@@ -89,7 +89,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <UserContext.Provider value={{ user, loading, logout }}>
+    <UserContext.Provider value={{ user, loading, logout, setUser }}>
       {children}
     </UserContext.Provider>
   );

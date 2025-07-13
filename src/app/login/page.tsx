@@ -3,7 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { setTokens } from '@/lib/api'; // directly set tokens in memory
+import {
+  getCurrentUser,
+  loadTokensFromStorage,
+  setTokens,
+} from '@/lib/api';
+import { useUser } from '@/context/UserContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -14,10 +19,11 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { setUser } = useUser(); // ✅ from context
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // prevent double submit
+    if (loading) return;
 
     if (!email || !password) {
       setMessage('❗ Please fill in all fields.');
@@ -44,49 +50,44 @@ export default function LoginPage() {
         return;
       }
 
-      // Set tokens in memory immediately
+      // Save in-memory tokens
       setTokens({
         access: data.token,
         refresh: data.refreshToken,
       });
 
-      // Store tokens based on rememberMe choice
+      // Save to storage
       if (rememberMe) {
-        try {
-          localStorage.setItem('triptask_token', data.token);
-          if (data.refreshToken) {
-            localStorage.setItem('triptask_refresh_token', data.refreshToken);
-          }
-          // Clear sessionStorage tokens if any
-          sessionStorage.removeItem('triptask_token');
-          sessionStorage.removeItem('triptask_refresh_token');
-          console.log('🔐 LoginPage: tokens saved to localStorage and sessionStorage cleared');
-        } catch (err) {
-          console.warn('⚠️ Failed to save tokens to localStorage:', err);
-        }
+        localStorage.setItem('triptask_token', data.token);
+        localStorage.setItem('triptask_refresh_token', data.refreshToken || '');
+        sessionStorage.removeItem('triptask_token');
+        sessionStorage.removeItem('triptask_refresh_token');
+        console.log('🔐 LoginPage: tokens saved to localStorage and sessionStorage cleared');
       } else {
-        try {
-          sessionStorage.setItem('triptask_token', data.token);
-          if (data.refreshToken) {
-            sessionStorage.setItem('triptask_refresh_token', data.refreshToken);
-          }
-          // Clear localStorage tokens if any
-          localStorage.removeItem('triptask_token');
-          localStorage.removeItem('triptask_refresh_token');
-          console.log('🔐 LoginPage: tokens saved to sessionStorage and localStorage cleared');
-        } catch (err) {
-          console.warn('⚠️ Failed to save tokens to sessionStorage:', err);
-        }
+        sessionStorage.setItem('triptask_token', data.token);
+        sessionStorage.setItem('triptask_refresh_token', data.refreshToken || '');
+        localStorage.removeItem('triptask_token');
+        localStorage.removeItem('triptask_refresh_token');
+        console.log('🔐 LoginPage: tokens saved to sessionStorage and localStorage cleared');
       }
 
-      // Decode JWT payload to get role (careful with base64 decode)
-      const payloadBase64 = data.token.split('.')[1];
-      const decoded = JSON.parse(atob(payloadBase64));
-      const role = decoded.role;
+      // Load tokens into memory again and fetch user
+      loadTokensFromStorage();
+      const freshUser = await getCurrentUser();
+
+      if (freshUser) {
+        console.log('✅ LoginPage: loaded user after login →', freshUser);
+        setUser(freshUser); // ✅ set in context
+      } else {
+        console.warn('⚠️ LoginPage: no user found after login');
+        setMessage('❌ Login succeeded, but user not found.');
+        return;
+      }
 
       setMessage('✅ Login successful! Redirecting...');
 
       // Redirect based on role
+      const role = freshUser.role;
       if (role === 'rider') {
         router.push('/rider/dashboard');
       } else if (role === 'customer') {
