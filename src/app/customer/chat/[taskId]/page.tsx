@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -12,6 +13,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import io, { Socket } from 'socket.io-client';
+import { getAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 let socket: Socket;
@@ -40,7 +42,7 @@ export default function ChatPage() {
   const [chats, setChats] = useState<ChatMessage[]>([]);
   const [newText, setNewText] = useState('');
   const [riderName, setRiderName] = useState('');
-  const [bookingStatus, setBookingStatus] = useState<string>('Loading...');
+  const [bookingStatus, setBookingStatus] = useState('Loading...');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -53,18 +55,22 @@ export default function ChatPage() {
   const taskId = params?.taskId?.toString();
 
   useEffect(() => {
-    const token = localStorage.getItem('triptask_token');
+    const token = getAccessToken();
     if (!token || !taskId) return router.push('/login');
 
-    try {
-      const base64 = token.split('.')[1];
-      const decodedJson = atob(base64);
-      const decoded: User = JSON.parse(decodedJson);
-      setUser({ name: decoded.name, role: decoded.role });
-    } catch (err) {
-      console.error('Invalid token:', err);
-      return router.push('/login');
-    }
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        setUser(data.user);
+      } catch {
+        router.push('/login');
+      }
+    };
+
+    fetchUser();
 
     socket = io(API_BASE, {
       auth: { token },
@@ -75,9 +81,7 @@ export default function ChatPage() {
 
     socket.on('status-update', (data: { status: string }) => {
       setBookingStatus(data.status);
-      if (data.status === 'completed') {
-        router.push('/customer/history');
-      }
+      if (data.status === 'completed') router.push('/customer/history');
     });
 
     socket.on('new-message', (message: ChatMessage) => {
@@ -100,9 +104,11 @@ export default function ChatPage() {
           const chatData = await chatRes.json();
           setChats(Array.isArray(chatData) ? chatData : []);
         }
+
         if (taskRes.ok) {
           const task = await taskRes.json();
           setBookingStatus(task.status);
+          setRiderName(task.name); // assuming `name` is rider's name
         }
       } catch (error) {
         console.error('❌ Fetch error:', error);
@@ -116,19 +122,6 @@ export default function ChatPage() {
       socket?.disconnect();
     };
   }, [taskId, router]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('triptask_token');
-    if (!token) return;
-    fetch(`${API_BASE}/users`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => res.json())
-      .then((users: User[]) => {
-        const rider = users.find(u => u.role === 'rider');
-        if (rider) setRiderName(rider.name);
-      });
-  }, []);
 
   const handleScroll = () => {
     const container = chatContainerRef.current;
@@ -150,7 +143,7 @@ export default function ChatPage() {
   };
 
   const sendMessage = async () => {
-    const token = localStorage.getItem('triptask_token');
+    const token = getAccessToken();
     if (!taskId || !user?.name || !token || (!newText.trim() && selectedFiles.length === 0)) return;
 
     const uploadedUrls: FileMeta[] = [];
@@ -182,17 +175,16 @@ export default function ChatPage() {
           taskId,
           sender: user.name,
           text: newText.trim(),
-          file_urls: uploadedUrls,
+          fileUrls: uploadedUrls, // camelCase
         }),
       });
+
+      setNewText('');
+      setSelectedFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       console.error('❌ Error sending chat:', err);
     }
-
-    setNewText('');
-    setSelectedFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    scrollToBottom();
   };
 
   return (
