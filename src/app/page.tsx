@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '../lib/api';
+import { getCurrentUser, loadTokensFromStorage } from '../lib/api';
 
 export default function HomePage() {
   const router = useRouter();
@@ -10,6 +10,9 @@ export default function HomePage() {
   useEffect(() => {
     async function redirectUser() {
       try {
+        // ✅ Load tokens into memory first (important for Safari/localStorage-based auth)
+        loadTokensFromStorage();
+
         const user = await getCurrentUser();
 
         if (user?.role === 'rider') {
@@ -17,12 +20,11 @@ export default function HomePage() {
         } else if (user?.role === 'customer') {
           router.replace('/customer/dashboard');
         } else {
-          // No user → send to login
-          router.replace('/login');
+          router.replace('/login'); // No user or unknown role
         }
       } catch (err) {
         console.error('Auth check failed:', err);
-        router.replace('/login'); // Also go to login on error
+        router.replace('/login');
       }
     }
 
@@ -30,8 +32,8 @@ export default function HomePage() {
   }, [router]);
 
   return (
-    <div className="p-4 text-center">
-      🔐 Checking session...
+    <div className="p-4 text-center text-yellow-800 font-mono">
+      Checking session...
     </div>
   );
 }

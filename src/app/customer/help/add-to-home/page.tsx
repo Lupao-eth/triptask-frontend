@@ -6,16 +6,37 @@ import { ArrowLeft, Loader2, X } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 export default function AddToHomePage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
 
+  // Verify token and user role
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
+    const verifyUser = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/token`, {
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('Unauthorized');
+        const data = await res.json();
+        const decoded = JSON.parse(atob(data.token.split('.')[1]));
+        if (decoded.role !== 'customer') {
+          router.push('/not-authorized');
+          return;
+        }
+      } catch {
+        router.push('/login');
+      } finally {
+        setTimeout(() => setIsLoading(false), 400);
+      }
+    };
+
+    verifyUser();
+  }, [router]);
 
   return (
     <div
@@ -45,7 +66,7 @@ export default function AddToHomePage() {
                 <h1 className="text-3xl font-bold">Add to Home Screen</h1>
               </div>
 
-              {/* Android section */}
+              {/* Android instructions */}
               <p className="mb-2 font-semibold">For Android (Chrome):</p>
               <ul className="list-disc ml-6 mb-4 text-sm">
                 <li>Open the TripTask website in Chrome</li>
@@ -59,7 +80,7 @@ export default function AddToHomePage() {
                 onClick={() => setPreviewSrc('/images/help/Android.png')}
               />
 
-              {/* iOS section */}
+              {/* iOS instructions */}
               <p className="mb-2 font-semibold">For iOS (Safari):</p>
               <ul className="list-disc ml-6 text-sm">
                 <li>Open the TripTask website in Safari</li>

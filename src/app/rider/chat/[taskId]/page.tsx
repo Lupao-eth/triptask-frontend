@@ -11,33 +11,15 @@ import {
   ArrowLeftIcon,
 } from '@heroicons/react/24/outline';
 import io, { Socket } from 'socket.io-client';
+import { getAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 let socket: Socket;
 
-type FileMeta = {
-  url: string;
-  type: string;
-  name?: string;
-};
-
-type Chat = {
-  sender: string;
-  text: string;
-  file_urls: FileMeta[];
-  timestamp: string;
-};
-
-type User = {
-  name: string;
-  role: string;
-};
-
-type Task = {
-  id: string;
-  name: string;
-  status: string;
-};
+type FileMeta = { url: string; type: string; name?: string };
+type Chat = { sender: string; text: string; file_urls: FileMeta[]; timestamp: string };
+type User = { name: string; role: string };
+type Task = { id: string; name: string; status: string };
 
 export default function RiderChatPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -50,73 +32,69 @@ export default function RiderChatPage() {
   const params = useParams();
   const router = useRouter();
   const taskId = params?.taskId?.toString();
-
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 1: Get user
   useEffect(() => {
-    fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => {
+    const fetchUser = async () => {
+      const token = getAccessToken();
+      if (!token) return router.replace('/login');
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
         setUser(data.user);
-      })
-      .catch(() => router.replace('/login'));
+      } catch {
+        router.replace('/login');
+      }
+    };
+    fetchUser();
   }, [router]);
 
-  // Step 2: Get token and connect socket
   useEffect(() => {
     if (!user || !taskId) return;
 
-    const setupSocket = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/auth/token`, { credentials: 'include' });
-        if (!res.ok) throw new Error('Failed to fetch token');
-        const tokenData = await res.json();
-        const token = tokenData.token;
+    const token = getAccessToken();
+    if (!token) return;
 
-          socket = io(API_BASE, {
-            auth: { token },
-            transports: ['websocket'],
-          });
+    socket = io(API_BASE, {
+      auth: { token },
+      transports: ['websocket'],
+    });
 
-        socket.emit('join', `chat-${taskId}`);
+    socket.emit('join', `chat-${taskId}`);
 
-        socket.on('new-message', (message: Chat) => {
-          setChats(prev => [...prev, message]);
-          scrollToBottom();
-        });
+    socket.on('new-message', (message: Chat) => {
+      setChats(prev => [...prev, message]);
+      scrollToBottom();
+    });
 
-        socket.on('status-update', (data: { status: string }) => {
-          setBookingStatus(data.status);
-          if (data.status === 'completed') {
-            router.push('/rider/history');
-          }
-        });
-      } catch (err) {
-        console.error('Socket setup failed:', err);
-      }
-    };
-
-    setupSocket();
+    socket.on('status-update', ({ status }: { status: string }) => {
+      setBookingStatus(status);
+      if (status === 'completed') router.push('/rider/history');
+    });
 
     return () => {
-      socket?.emit('leave', `chat-${taskId}`);
-      socket?.disconnect();
+      socket.emit('leave', `chat-${taskId}`);
+      socket.disconnect();
     };
   }, [user, taskId, router]);
 
-  // Step 3: Load chats and task
   useEffect(() => {
-    if (!taskId) return;
+    const token = getAccessToken();
+    if (!taskId || !token) return;
 
-    fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' })
+    fetch(`${API_BASE}/chats/${taskId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(res => res.json())
-      .then((data: Chat[]) => setChats(Array.isArray(data) ? data : []))
-      .catch(() => setChats([]));
+      .then((data: Chat[]) => setChats(Array.isArray(data) ? data : []));
 
-    fetch(`${API_BASE}/tasks/${taskId}`, { credentials: 'include' })
-      .then(res => res.ok ? res.json() : Promise.reject())
+    fetch(`${API_BASE}/tasks/${taskId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
       .then((task: Task) => {
         setBookingStatus(task.status);
         setCustomerName(task.name);
@@ -129,21 +107,18 @@ export default function RiderChatPage() {
   }, [taskId, router]);
 
   const scrollToBottom = () => {
-    chatContainerRef.current?.scrollTo({
-      top: chatContainerRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
+    chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      setSelectedFiles((prev) => [...prev, ...Array.from(files)]);
-    }
+    if (files) setSelectedFiles(prev => [...prev, ...Array.from(files)]);
   };
 
   const sendMessage = async () => {
     if (!newText.trim() && selectedFiles.length === 0) return;
+    const token = getAccessToken();
+    if (!token) return;
 
     const uploadedUrls: FileMeta[] = [];
 
@@ -151,26 +126,21 @@ export default function RiderChatPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      try {
-        const res = await fetch(`${API_BASE}/chats/upload`, {
-          method: 'POST',
-          body: formData,
-          credentials: 'include',
-        });
-
-        if (!res.ok) throw new Error('Upload failed');
-
-        const result = await res.json();
-        uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
-      } catch (err) {
-        console.error('Upload failed:', err);
-      }
+      const res = await fetch(`${API_BASE}/chats/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const result = await res.json();
+      uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
     }
 
     await fetch(`${API_BASE}/chats`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
         taskId,
         sender: user?.name,
@@ -185,10 +155,14 @@ export default function RiderChatPage() {
   };
 
   const updateStatus = async (newStatus: string) => {
+    const token = getAccessToken();
+    if (!token) return;
     const res = await fetch(`${API_BASE}/tasks/${taskId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({ status: newStatus }),
     });
     if (res.ok) setBookingStatus(newStatus);

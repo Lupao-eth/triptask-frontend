@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import { getAccessToken } from '@/lib/api'
 import TopBar from '../Topbar'
 
 type Task = {
@@ -35,9 +36,14 @@ export default function ActiveBookingsPage() {
 
   useEffect(() => {
     const fetchTasks = async () => {
+      const token = getAccessToken()
+      if (!token) return router.replace('/login')
+
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/tasks/active`, {
-          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         })
         const data = await res.json()
 
@@ -55,7 +61,7 @@ export default function ActiveBookingsPage() {
     }
 
     fetchTasks()
-  }, [])
+  }, [router])
 
   const formatDate = (value: string) => {
     const date = new Date(value)
@@ -63,25 +69,29 @@ export default function ActiveBookingsPage() {
   }
 
   const handleToggleDetails = (taskId: string) => {
-    setExpandedTaskIds((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(taskId)) {
-        newSet.delete(taskId)
-      } else {
-        newSet.add(taskId)
-      }
-      return newSet
-    })
-  }
+  setExpandedTaskIds(prev => {
+    const newSet = new Set(prev)
+    if (newSet.has(taskId)) {
+      newSet.delete(taskId)
+    } else {
+      newSet.add(taskId)
+    }
+    return newSet
+  })
+}
+
 
   const updateStatus = async (taskId: string, newStatus: 'on_the_way' | 'completed' | 'cancelled') => {
+    const token = getAccessToken()
+    if (!token) return router.replace('/login')
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       })
       const data = await res.json()
@@ -91,8 +101,8 @@ export default function ActiveBookingsPage() {
         return
       }
 
-      setTasks((prev) =>
-        prev.map((task) =>
+      setTasks(prev =>
+        prev.map(task =>
           task.id === taskId ? { ...task, status: data.task.status } : task
         )
       )
@@ -116,7 +126,7 @@ export default function ActiveBookingsPage() {
           <div className="text-center text-gray-500">No active bookings.</div>
         ) : (
           <div className="space-y-4">
-            {tasks.map((task) => (
+            {tasks.map(task => (
               <div
                 key={task.id}
                 className="w-full border border-gray-300 bg-white rounded-xl shadow p-4"

@@ -32,7 +32,8 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
+      // Step 1: Register
+      const registerRes = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,15 +41,43 @@ export default function RegisterPage() {
         body: JSON.stringify({ name, email, password }),
       });
 
-      const data = await res.json();
+      const registerData = await registerRes.json();
 
-      if (res.ok) {
-        setMessage('✅ Account created! Redirecting...');
-        setTimeout(() => {
-          router.push('/login');
-        }, 1500);
+      if (!registerRes.ok) {
+        setMessage(`❌ ${registerData.message || 'Registration failed.'}`);
+        return;
+      }
+
+      setMessage('✅ Account created! Logging in...');
+
+      // Step 2: Auto-login after successful registration
+      const loginRes = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (!loginRes.ok || !loginData.token) {
+        setMessage('✅ Account created, but login failed. Please login manually.');
+        setTimeout(() => router.push('/login'), 1500);
+        return;
+      }
+
+      // Step 3: Save token to localStorage
+      localStorage.setItem('triptask_token', loginData.token);
+
+      // Step 4: Decode role and redirect
+      const decoded = JSON.parse(atob(loginData.token.split('.')[1]));
+      if (decoded.role === 'customer') {
+        router.push('/customer/dashboard');
+      } else if (decoded.role === 'rider') {
+        router.push('/rider/dashboard');
       } else {
-        setMessage(`❌ ${data.message}`);
+        router.push('/');
       }
     } catch (error) {
       console.error(error);

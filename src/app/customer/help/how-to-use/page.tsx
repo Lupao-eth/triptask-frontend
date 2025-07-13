@@ -6,35 +6,15 @@ import { ArrowLeft, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const slides = [
-  {
-    src: '/images/help/home-page.png',
-    title: 'How to book',
-  },
-  {
-    src: '/images/help/booknow.png',
-    title: 'Input information',
-  },
-  {
-    src: '/images/help/confirm.png',
-    title: 'Booking Confirmation',
-  },
-  {
-    src: '/images/help/bookstatus.png',
-    title: 'Check booking status',
-  },
-  {
-    src: '/images/help/chat.png',
-    title: 'Communicate with rider',
-  },
-  {
-    src: '/images/help/servicefee.png',
-    title: 'Services fee settlement',
-  },
-  {
-    src: '/images/help/bookhistory.png',
-    title: 'View booking history',
-  },
+  { src: '/images/help/home-page.png', title: 'How to book' },
+  { src: '/images/help/booknow.png', title: 'Input information' },
+  { src: '/images/help/confirm.png', title: 'Booking Confirmation' },
+  { src: '/images/help/bookstatus.png', title: 'Check booking status' },
+  { src: '/images/help/chat.png', title: 'Communicate with rider' },
+  { src: '/images/help/servicefee.png', title: 'Services fee settlement' },
+  { src: '/images/help/bookhistory.png', title: 'View booking history' },
 ];
 
 export default function HowToUsePage() {
@@ -48,10 +28,28 @@ export default function HowToUsePage() {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // Auth check
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
+    const getToken = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/auth/token`, {
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('Unauthorized');
+        const data = await res.json();
+        const decoded = JSON.parse(atob(data.token.split('.')[1]));
+        if (decoded.role !== 'customer') {
+          router.push('/not-authorized');
+          return;
+        }
+      } catch {
+        router.push('/login');
+      } finally {
+        setTimeout(() => setIsLoading(false), 400); // Simulate loading
+      }
+    };
+    getToken();
+  }, [router]);
 
   const goNext = () => {
     if (slideIndex < slides.length - 1) setSlideIndex((i) => i + 1);

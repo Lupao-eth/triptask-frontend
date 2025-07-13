@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import { getAccessToken } from '@/lib/api'
 import TopBar from '../Topbar'
 
 type Task = {
@@ -32,9 +33,14 @@ export default function AvailableBookingsPage() {
 
   useEffect(() => {
     const fetchTasks = async () => {
+      const token = getAccessToken()
+      if (!token) return router.replace('/login')
+
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/tasks/available`, {
-          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         })
         const data = await res.json()
         setTasks(data.tasks || [])
@@ -46,7 +52,7 @@ export default function AvailableBookingsPage() {
     }
 
     fetchTasks()
-  }, [])
+  }, [router])
 
   const formatDate = (value: string) => {
     const date = new Date(value)
@@ -54,32 +60,33 @@ export default function AvailableBookingsPage() {
   }
 
   const handleToggleDetails = (taskId: string) => {
-  setExpandedTaskIds((prev) => {
-    const newSet = new Set(prev)
-    if (newSet.has(taskId)) {
-      newSet.delete(taskId)
-    } else {
-      newSet.add(taskId)
-    }
-    return newSet
-  })
-}
-
+    setExpandedTaskIds((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId)
+      } else {
+        newSet.add(taskId)
+      }
+      return newSet
+    })
+  }
 
   const handleAcceptTask = async (taskId: string) => {
+    const token = getAccessToken()
+    if (!token) return router.replace('/login')
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/tasks/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
-        credentials: 'include',
         body: JSON.stringify({ status: 'accepted' }),
       })
 
       if (!res.ok) throw new Error('Failed to accept task')
 
-      // Remove from list after accepting
       setTasks((prev) => prev.filter((t) => t.id !== taskId))
     } catch (err) {
       console.error('❌ Accept task error:', err)

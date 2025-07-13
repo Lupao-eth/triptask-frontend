@@ -35,16 +35,24 @@ const BookStatus = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      const token = localStorage.getItem('triptask_token');
+      if (!token) return router.push('/login');
+
       try {
         const userRes = await fetch(`${API_BASE}/auth/me`, {
-          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-        if (!userRes.ok) return (window.location.href = '/login');
+        if (!userRes.ok) return router.push('/login');
+
         const userData = await userRes.json();
         setUser(userData.user);
 
         const taskRes = await fetch(`${API_BASE}/tasks`, {
-          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
         const taskData = await taskRes.json();
 
@@ -61,13 +69,18 @@ const BookStatus = () => {
     };
 
     fetchData();
-  }, []);
+  }, [router]);
 
   const cancelTask = async (id: number) => {
+    const token = localStorage.getItem('triptask_token');
+    if (!token) return;
+
     try {
       const res = await fetch(`${API_BASE}/tasks/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
       if (!res.ok) return alert('❌ Failed to cancel task');
       setTasks((prev) => prev.filter((task) => task.id !== id));
@@ -78,14 +91,19 @@ const BookStatus = () => {
   };
 
   const updateTask = async () => {
+    const token = localStorage.getItem('triptask_token');
+    if (!token || !selectedTask) return;
+
     try {
-      if (!selectedTask) return;
       const res = await fetch(`${API_BASE}/tasks/${selectedTask.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(selectedTask),
       });
+
       if (!res.ok) return alert('❌ Failed to update task');
       const updated = await res.json();
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -109,16 +127,15 @@ const BookStatus = () => {
   };
 
   if (loading) {
-  return (
-    <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
-      <div className="flex flex-col items-center space-y-4 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-600 border-t-transparent" />
-        <p className="text-lg sm:text-xl tracking-wide">Loading Book Status...</p>
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-600 border-t-transparent" />
+          <p className="text-lg sm:text-xl tracking-wide">Loading Book Status...</p>
+        </div>
       </div>
-    </div>
-  );
-}
-
+    );
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 pt-16 font-mono">
@@ -179,6 +196,7 @@ const BookStatus = () => {
         )}
       </div>
 
+      {/* Modal for task editing or viewing */}
       {selectedTask && (
         <div
           className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.4)] backdrop-blur-sm flex items-center justify-center px-4"

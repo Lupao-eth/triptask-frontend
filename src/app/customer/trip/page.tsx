@@ -1,17 +1,58 @@
 'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '../dashboard/TopBar';
 import SideMenu from '../dashboard/SideMenu';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 export default function TripServicePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    setFadeIn(true);
-  }, []);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('triptask_token');
+
+      if (!token) {
+        console.warn('❌ No token in localStorage');
+        router.replace('/login');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/token`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) throw new Error('Token fetch failed');
+
+        const data = await res.json();
+        const decoded = JSON.parse(atob(data.token.split('.')[1]));
+
+        if (decoded.role !== 'customer') {
+          return router.replace('/login');
+        }
+      } catch (err) {
+        console.error('❌ Auth error:', err);
+        return router.replace('/login');
+      } finally {
+        setFadeIn(true);
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  if (loading) {
+    return <div className="p-6 font-mono text-black">Checking access...</div>;
+  }
 
   return (
     <main className="flex flex-col h-screen bg-white font-mono">

@@ -52,56 +52,64 @@ export default function ChatPage() {
   const router = useRouter();
   const taskId = params?.taskId?.toString();
 
-  // Socket.IO setup with Option B
   useEffect(() => {
-    if (!taskId) return;
+    const token = localStorage.getItem('triptask_token');
+    if (!token || !taskId) return router.push('/login');
 
-    // Step 1: Get user first
-    fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(async data => {
-        setUser(data.user);
+    try {
+      const base64 = token.split('.')[1];
+      const decodedJson = atob(base64);
+      const decoded: User = JSON.parse(decodedJson);
+      setUser({ name: decoded.name, role: decoded.role });
+    } catch (err) {
+      console.error('Invalid token:', err);
+      return router.push('/login');
+    }
 
-        // Step 2: Get token from /auth/token
-        const res = await fetch(`${API_BASE}/auth/token`, { credentials: 'include' });
-        if (!res.ok) throw new Error('Token fetch failed');
-        const tokenData = await res.json();
+    socket = io(API_BASE, {
+      auth: { token },
+      transports: ['websocket'],
+    });
 
-        // Step 3: Connect via token auth
-        socket = io(API_BASE, {
-          auth: { token: tokenData.token },
-          transports: ['websocket'],
-        });
+    socket.emit('join', `chat-${taskId}`);
 
-        socket.emit('join', `chat-${taskId}`);
+    socket.on('status-update', (data: { status: string }) => {
+      setBookingStatus(data.status);
+      if (data.status === 'completed') {
+        router.push('/customer/history');
+      }
+    });
 
-        socket.on('status-update', (data: { status: string }) => {
-          setBookingStatus(data.status);
-          if (data.status === 'completed') {
-            router.push('/customer/history');
-          }
-        });
+    socket.on('new-message', (message: ChatMessage) => {
+      setChats(prev => [...prev, message]);
+      scrollToBottom();
+    });
 
-        socket.on('new-message', (message: ChatMessage) => {
-          setChats(prev => [...prev, message]);
-          scrollToBottom();
-        });
+    const fetchInitialData = async () => {
+      try {
+        const [chatRes, taskRes] = await Promise.all([
+          fetch(`${API_BASE}/chats/${taskId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE}/tasks/${taskId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-        // Step 4: Fetch chat history
-const chatRes = await fetch(`${API_BASE}/chats/${taskId}`, { credentials: 'include' });
-const chatData = await chatRes.json();
-setChats(Array.isArray(chatData) ? chatData : []);
+        if (chatRes.ok) {
+          const chatData = await chatRes.json();
+          setChats(Array.isArray(chatData) ? chatData : []);
+        }
+        if (taskRes.ok) {
+          const task = await taskRes.json();
+          setBookingStatus(task.status);
+        }
+      } catch (error) {
+        console.error('❌ Fetch error:', error);
+      }
+    };
 
-// ✅ Fetch initial task status
-const taskRes = await fetch(`${API_BASE}/tasks/${taskId}`, { credentials: 'include' });
-if (taskRes.ok) {
-  const task = await taskRes.json();
-  setBookingStatus(task.status);
-} else {
-  console.warn('❌ Failed to fetch task status');
-}
-      })
-      .catch(() => router.push('/login'));
+    fetchInitialData();
 
     return () => {
       socket?.emit('leave', `chat-${taskId}`);
@@ -109,9 +117,12 @@ if (taskRes.ok) {
     };
   }, [taskId, router]);
 
-  // Get rider name
   useEffect(() => {
-    fetch(`${API_BASE}/users`, { credentials: 'include' })
+    const token = localStorage.getItem('triptask_token');
+    if (!token) return;
+    fetch(`${API_BASE}/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(res => res.json())
       .then((users: User[]) => {
         const rider = users.find(u => u.role === 'rider');
@@ -139,23 +150,20 @@ if (taskRes.ok) {
   };
 
   const sendMessage = async () => {
-    if (!taskId || !user?.name || (!newText.trim() && selectedFiles.length === 0)) return;
+    const token = localStorage.getItem('triptask_token');
+    if (!taskId || !user?.name || !token || (!newText.trim() && selectedFiles.length === 0)) return;
 
     const uploadedUrls: FileMeta[] = [];
 
     for (const file of selectedFiles) {
       const formData = new FormData();
       formData.append('file', file);
-
       try {
         const res = await fetch(`${API_BASE}/chats/upload`, {
           method: 'POST',
           body: formData,
-          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!res.ok) throw new Error('Upload failed');
-
         const result = await res.json();
         uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
       } catch (error) {
@@ -166,8 +174,10 @@ if (taskRes.ok) {
     try {
       await fetch(`${API_BASE}/chats`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           taskId,
           sender: user.name,

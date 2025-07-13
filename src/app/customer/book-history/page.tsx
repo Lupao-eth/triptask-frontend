@@ -33,10 +33,14 @@ const BookHistory = () => {
 
   useEffect(() => {
     const fetchData = async () => {
+      const token = localStorage.getItem('triptask_token');
+      if (!token) return (window.location.href = '/login');
+
       try {
         const userRes = await fetch(`${API_BASE}/auth/me`, {
-          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
         });
+
         if (!userRes.ok) {
           window.location.href = '/login';
           return;
@@ -46,7 +50,7 @@ const BookHistory = () => {
         setUser(userData.user);
 
         const taskRes = await fetch(`${API_BASE}/tasks`, {
-          credentials: 'include',
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!taskRes.ok) throw new Error('Failed to fetch tasks');

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import { getAccessToken, loadTokensFromStorage } from '@/lib/api'
 import TopBar from '../Topbar'
 
 type Task = {
@@ -36,9 +37,24 @@ export default function RiderHistoryPage() {
   useEffect(() => {
     const fetchTasks = async () => {
       try {
+        loadTokensFromStorage()
+        const token = getAccessToken()
+        if (!token) {
+          console.warn('⚠️ No access token found')
+          return
+        }
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/tasks/history`, {
-          credentials: 'include',
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         })
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch history: ${res.status}`)
+        }
+
         const data = await res.json()
         setTasks(data || [])
       } catch (err) {

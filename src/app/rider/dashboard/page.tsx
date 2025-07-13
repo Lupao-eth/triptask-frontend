@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@/context/UserContext'
+import { getAccessToken, loadTokensFromStorage, logoutUser } from '@/lib/api'
 import TopBar from '../Topbar'
 import Link from 'next/link'
 
@@ -11,10 +12,31 @@ export default function RiderDashboard() {
   const router = useRouter()
 
   useEffect(() => {
+    loadTokensFromStorage()
+
     if (!loading && (!user || user.role !== 'rider')) {
       router.replace('/login')
     }
   }, [user, loading, router])
+
+  const handleLogout = async () => {
+    const token = getAccessToken()
+    if (!token) return router.push('/login')
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+    } catch (err) {
+      console.error('Logout failed:', err)
+    } finally {
+      logoutUser()
+      router.push('/login')
+    }
+  }
 
   if (loading) return <div className="p-6 text-center font-mono text-black">🔄 Loading...</div>
   if (!user || user.role !== 'rider') return null
@@ -60,13 +82,7 @@ export default function RiderDashboard() {
         </div>
 
         <button
-          onClick={async () => {
-            await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/logout`, {
-              method: 'POST',
-              credentials: 'include',
-            })
-            router.push('/login')
-          }}
+          onClick={handleLogout}
           className="mt-6 w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 font-semibold"
         >
           Logout

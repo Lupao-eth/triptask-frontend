@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from './TopBar';
 import TutorialModal from './TutorialModal';
-import TermsModal from './TermsModal'; // ✅ Import your terms modal
+import TermsModal from './TermsModal';
 
 type User = {
   id: string;
@@ -26,14 +26,21 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     const fetchUser = async () => {
+      const token = localStorage.getItem('triptask_token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/auth/me`, {
-          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!res.ok) {
-          router.push('/login');
-          return;
+          throw new Error('Unauthorized');
         }
 
         const data = await res.json();
@@ -46,15 +53,13 @@ export default function CustomerDashboard() {
         setUser(data.user);
         setLoading(false);
 
-        if (typeof window !== 'undefined') {
-          const seenTerms = localStorage.getItem('seenTerms');
-          const seenTutorial = localStorage.getItem('seenTutorial');
+        const seenTerms = localStorage.getItem('seenTerms');
+        const seenTutorial = localStorage.getItem('seenTutorial');
 
-          if (!seenTerms) {
-            setShowTerms(true);
-          } else if (!seenTutorial) {
-            setShowTutorial(true);
-          }
+        if (!seenTerms) {
+          setShowTerms(true);
+        } else if (!seenTutorial) {
+          setShowTutorial(true);
         }
       } catch (err) {
         console.error('❗ Failed to fetch user:', err);
@@ -69,7 +74,6 @@ export default function CustomerDashboard() {
     localStorage.setItem('seenTerms', 'true');
     setShowTerms(false);
 
-    // Show tutorial right after agreeing
     const seenTutorial = localStorage.getItem('seenTutorial');
     if (!seenTutorial) {
       setShowTutorial(true);
@@ -133,10 +137,8 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      {/* ✅ Terms shows first */}
       {showTerms && <TermsModal onAgree={handleAgreeToTerms} />}
 
-      {/* ✅ Tutorial shows after agreeing to terms */}
       {showTutorial && (
         <TutorialModal
           onClose={() => {

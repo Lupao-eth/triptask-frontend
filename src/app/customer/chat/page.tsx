@@ -5,28 +5,48 @@ import TopBar from '../dashboard/TopBar';
 import SideMenu from '../dashboard/SideMenu';
 
 type Task = { id: number; name: string; status: string };
+type User = { name: string };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE as string;
 
 export default function ChatListPage() {
-  const [user, setUser] = useState<{ name: string } | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const router = useRouter();
 
   useEffect(() => {
-    fetch(`${API_BASE}/auth/me`, { credentials: 'include' })
-      .then(res => res.ok ? res.json() : Promise.reject())
+    const token = localStorage.getItem('triptask_token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    fetch(`${API_BASE}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => (res.ok ? res.json() : Promise.reject()))
       .then(data => setUser(data.user))
       .catch(() => router.push('/login'));
   }, [router]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/tasks`, { credentials: 'include' })
+    const token = localStorage.getItem('triptask_token');
+    if (!token) return;
+
+    fetch(`${API_BASE}/tasks`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then(res => res.json())
-      .then((all: Task[]) =>
-        setTasks(all.filter(t => ['accepted', 'on_the_way'].includes(t.status)))
-      );
+      .then((all: Task[]) => {
+        const active = all.filter(t => ['accepted', 'on_the_way'].includes(t.status));
+        setTasks(active);
+      })
+      .catch(err => console.error('Failed to load tasks:', err));
   }, []);
 
   return (

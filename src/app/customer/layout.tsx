@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 let socket: Socket;
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
@@ -12,28 +12,28 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [showOverlay, setShowOverlay] = useState(true);
   const [loadingRetry, setLoadingRetry] = useState(false);
   const [loadingBack, setLoadingBack] = useState(false);
-  const [token, setToken] = useState<string | null>(null); // Add token state
+  const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
   const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch /auth/me
+  // ✅ Get token from localStorage instead of cookies
   useEffect(() => {
-    fetch(`${API_BASE}/auth/token`, {
-      credentials: 'include',
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        setToken(data.token);
-      })
-      .catch(() => {
-        console.warn('Failed to fetch auth token');
-        setToken(null);
-      });
+    const savedToken = localStorage.getItem('triptask_token');
+    if (!savedToken) {
+      console.warn('❌ No token found in localStorage');
+      setToken(null);
+    } else {
+      setToken(savedToken);
+    }
   }, []);
 
-  const fetchInitialStatus = async () => {
+  const fetchInitialStatus = async (authToken: string) => {
     try {
-      const res = await fetch(`${API_BASE}/service-status`);
+      const res = await fetch(`${API_BASE}/service-status`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
       const data = await res.json();
       console.log('🌐 Initial service status:', data.isOnline);
       setServiceOnline(data.isOnline);
@@ -50,11 +50,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!token) return;
-    fetchInitialStatus();
+
+    fetchInitialStatus(token);
 
     socket = io(API_BASE, {
-      auth: { token }, // ✅ Option B: send token explicitly
-      withCredentials: true,
+      auth: { token },
+      withCredentials: false,
     });
 
     socket.on('connect', () => {
@@ -79,10 +80,12 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       if (overlayTimeoutRef.current) clearTimeout(overlayTimeoutRef.current);
     };
   }, [token]);
+
   const handleRetry = async () => {
+    if (!token) return;
     setLoadingRetry(true);
     try {
-      await fetchInitialStatus();
+      await fetchInitialStatus(token);
       if (socket?.disconnected) socket.connect();
     } finally {
       setTimeout(() => setLoadingRetry(false), 1000);

@@ -16,8 +16,10 @@ type User = {
   role: 'rider' | 'customer';
 };
 
+
 const TaskPage = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -35,23 +37,32 @@ const TaskPage = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const res = await fetch(`${API_BASE}/auth/me`, {
-        credentials: 'include',
-      });
+      try {
+        const savedToken = localStorage.getItem('triptask_token');
+if (!savedToken) throw new Error('No token found in localStorage');
 
-      if (!res.ok) {
+const res = await fetch(`${API_BASE}/auth/token`, {
+  headers: {
+    Authorization: `Bearer ${savedToken}`,
+  },
+});
+
+        if (!res.ok) throw new Error('Unauthorized');
+        const data = await res.json();
+        const decoded = JSON.parse(atob(data.token.split('.')[1]));
+
+        if (decoded.role !== 'customer') {
+          window.location.href = '/not-authorized';
+          return;
+        }
+
+        setUser({ id: decoded.id, email: decoded.email, name: decoded.name, role: decoded.role });
+        setToken(data.token);
+      } catch {
         window.location.href = '/login';
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      const data = await res.json();
-      if (data.user.role !== 'customer') {
-        window.location.href = '/not-authorized';
-        return;
-      }
-
-      setUser(data.user);
-      setLoading(false);
     };
 
     fetchUser();
@@ -69,14 +80,16 @@ const TaskPage = () => {
     setShowModal(true);
   };
 
-  const confirmBooking = async () => {
-    setShowModal(false);
 
+ const confirmBooking = async () => {
+    setShowModal(false);
     try {
       const res = await fetch(`${API_BASE}/tasks`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           ...form,
           datetime: scheduleOption === 'ASAP' ? 'ASAP' : form.datetime,
@@ -100,16 +113,17 @@ const TaskPage = () => {
     }
   };
 
+  
   if (loading || !user) {
-  return (
-    <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
-      <div className="flex flex-col items-center space-y-4 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-600 border-t-transparent" />
-        <p className="text-lg sm:text-xl tracking-wide">Loading Task Page...</p>
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
+        <div className="flex flex-col items-center space-y-4 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-4 border-yellow-600 border-t-transparent" />
+          <p className="text-lg sm:text-xl tracking-wide">Loading Task Page...</p>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 
   return (

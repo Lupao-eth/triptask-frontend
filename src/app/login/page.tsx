@@ -2,14 +2,17 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { loginUser } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false); // Optional
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,44 +23,49 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    setMessage('Logging in...');
+    setMessage('🔐 Logging in...');
 
     try {
-      const user = await loginUser(email, password, rememberMe);
-      console.log('🔐 Login response:', user);
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (user) {
-        // ✅ Check if session is really established
-        const check = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/me`, {
-          method: 'GET',
-          credentials: 'include',
-        });
+      const data = await res.json();
 
-        if (check.ok) {
-          setMessage('✅ Login & session established! Redirecting...');
+      if (!res.ok || !data.token) {
+        setMessage(`❌ ${data.message || 'Login failed. Try again.'}`);
+        return;
+      }
 
-          const redirectTo =
-            user.role === 'rider'
-              ? '/rider/dashboard'
-              : '/customer/dashboard';
+      // ✅ Save access token to localStorage
+      localStorage.setItem('triptask_token', data.token);
 
-          setTimeout(() => {
-            window.location.href = redirectTo;
-          }, 300);
+      // (Optional: If your backend returns a refresh token too, store it)
+      if (data.refreshToken && rememberMe) {
+        localStorage.setItem('triptask_refresh_token', data.refreshToken);
+      }
+
+      // ✅ Decode the token to get user role
+      const decoded = JSON.parse(atob(data.token.split('.')[1]));
+      const role = decoded.role;
+
+      setMessage('✅ Login successful! Redirecting...');
+      setTimeout(() => {
+        if (role === 'rider') {
+          router.push('/rider/dashboard');
+        } else if (role === 'customer') {
+          router.push('/customer/dashboard');
         } else {
-          setMessage('⚠️ Login succeeded but session not established.');
-          console.warn('⚠️ Session cookie not working. Check cross-site cookie settings.');
+          router.push('/');
         }
-      } else {
-        setMessage('❌ Login failed. Please try again.');
-      }
-    } catch (err: unknown) {
+      }, 300);
+    } catch (err) {
       console.error('Login error:', err);
-      if (err instanceof Error) {
-        setMessage(`❌ ${err.message}`);
-      } else {
-        setMessage('❌ Something went wrong.');
-      }
+      setMessage('❌ Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -65,7 +73,7 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-yellow-50 text-yellow-900 font-mono px-4">
-      <div className="w-full max-w-sm border border-yellow-300 p-6 rounded-2xl shadow-md bg-white space-y-6 transition-opacity duration-700">
+      <div className="w-full max-w-sm border border-yellow-300 p-6 rounded-2xl shadow-md bg-white space-y-6">
         <h1 className="text-2xl font-bold text-center">Login to TripTask</h1>
 
         {message && (
@@ -111,12 +119,10 @@ export default function LoginPage() {
           </div>
           <button
             type="submit"
-            className={`w-full py-2 font-semibold rounded transition text-white ${
-              loading
-                ? 'bg-yellow-300 cursor-not-allowed'
-                : 'bg-yellow-500 hover:bg-yellow-600'
-            }`}
             disabled={loading}
+            className={`w-full py-2 font-semibold rounded text-white transition ${
+              loading ? 'bg-yellow-300 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600'
+            }`}
           >
             {loading ? 'Logging in...' : 'Log In'}
           </button>

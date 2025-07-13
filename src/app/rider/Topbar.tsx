@@ -2,6 +2,7 @@
 
 import { useUser } from '@/context/UserContext'
 import { useRouter } from 'next/navigation'
+import { logoutUser, getAccessToken } from '@/lib/api'
 
 export default function TopBar() {
   const { user } = useUser()
@@ -9,10 +10,19 @@ export default function TopBar() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      })
+      const token = getAccessToken()
+      if (!token) {
+        console.warn('⚠️ No access token found during logout.')
+      } else {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+      }
+
+      logoutUser() // Clear from memory + localStorage
       router.push('/login')
     } catch (err) {
       console.error('Logout failed:', err)

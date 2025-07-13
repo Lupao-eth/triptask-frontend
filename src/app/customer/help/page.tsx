@@ -6,16 +6,50 @@ import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
 import { useEffect, useState } from 'react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 export default function HelpPage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
 
-  // Simulate loading delay (e.g., fetching or animation)
+  // ✅ Validate token from localStorage
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400); // Adjust duration if needed
+    const validateToken = async () => {
+      const savedToken = localStorage.getItem('triptask_token');
+      if (!savedToken) {
+        router.push('/login');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${savedToken}`,
+          },
+        });
+
+        if (!res.ok) throw new Error('Invalid token');
+        setTokenValid(true);
+      } catch {
+  router.push('/login');
+}
+
+    };
+
+    validateToken();
+  }, [router]);
+
+  // Simulated loading for animation
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 400);
     return () => clearTimeout(timer);
   }, []);
+
+  if (!tokenValid) {
+    return null; // Prevent render until token check completes
+  }
 
   return (
     <div
@@ -44,7 +78,6 @@ export default function HelpPage() {
               </div>
 
               <div className="flex flex-col items-center gap-4">
-                {/* How to Use */}
                 <button
                   onClick={() => router.push('/customer/help/how-to-use')}
                   className="w-full max-w-md relative flex items-center justify-center px-6 py-4 bg-yellow-300 hover:bg-yellow-400 rounded-lg font-bold shadow transition"
@@ -55,7 +88,6 @@ export default function HelpPage() {
                   <ChevronRight size={20} className="ml-auto" />
                 </button>
 
-                {/* How to Add to Home Screen */}
                 <button
                   onClick={() => router.push('/customer/help/add-to-home')}
                   className="w-full max-w-md relative flex items-center justify-center px-6 py-4 bg-yellow-300 hover:bg-yellow-400 rounded-lg font-bold shadow transition"

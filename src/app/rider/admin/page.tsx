@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useUser } from '@/context/UserContext'
 import { useRouter } from 'next/navigation'
-import TopBar from '../Topbar' // ✅ Adjust the import path if needed
+import { useUser } from '@/context/UserContext'
+import { getAccessToken } from '@/lib/api'
+import TopBar from '../Topbar' // ✅ Adjust path if needed
 
 export default function AdminPanel() {
   const { user, loading } = useUser()
@@ -11,30 +12,61 @@ export default function AdminPanel() {
   const [isOnline, setIsOnline] = useState<boolean | null>(null)
   const [saving, setSaving] = useState(false)
 
+  // Redirect if not rider
   useEffect(() => {
     if (!loading && (!user || user.role !== 'rider')) {
       router.replace('/login')
     }
   }, [user, loading, router])
 
+  // Fetch service status
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE}/service-status`)
-      .then(res => res.json())
-      .then(data => setIsOnline(data.isOnline))
-  }, [])
+    const fetchStatus = async () => {
+      const token = getAccessToken()
+      if (!token) return router.replace('/login')
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/service-status`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+        if (!res.ok) throw new Error('Failed to fetch status')
+        const data = await res.json()
+        setIsOnline(data.isOnline)
+      } catch (err) {
+        console.error('❌ Failed to load service status:', err)
+      }
+    }
+
+    fetchStatus()
+  }, [router])
 
   const toggleStatus = async () => {
-    setSaving(true)
-    const newStatus = !isOnline
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/service-status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ isOnline: newStatus }),
-    })
+    const token = getAccessToken()
+    if (!token) return router.replace('/login')
 
-    if (res.ok) setIsOnline(newStatus)
-    setSaving(false)
+    try {
+      setSaving(true)
+      const newStatus = !isOnline
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/service-status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ isOnline: newStatus }),
+      })
+
+      if (!res.ok) throw new Error('Failed to update status')
+      setIsOnline(newStatus)
+    } catch (err) {
+      console.error('❌ Failed to update status:', err)
+      alert('Failed to update status.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (loading || isOnline === null) {
@@ -43,7 +75,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-gray-100 font-mono text-black">
-      <TopBar /> {/* ✅ Added here */}
+      <TopBar />
       <main className="p-6 max-w-lg mx-auto">
         <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
 
