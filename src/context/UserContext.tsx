@@ -1,13 +1,17 @@
 'use client';
 
+import {
+  getCurrentUser,
+  loadTokensFromStorage,
+  logoutUser,
+} from '../lib/api';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getCurrentUser, loadTokensFromStorage, logoutUser } from '../lib/api';
 
 export type User = {
   id: string;
   email: string;
   name?: string;
-  role: 'rider' | 'customer'; // ✅ Only support these roles
+  role: 'rider' | 'customer';
 };
 
 type UserContextType = {
@@ -26,37 +30,39 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Logout helper to clear tokens and user state
   const logout = () => {
-    logoutUser(); // clears tokens from storage and memory
+    logoutUser();
     setUser(null);
   };
 
   useEffect(() => {
-    try {
-      loadTokensFromStorage(); // Load tokens from storage once on app init
-    } catch (err) {
-      console.warn('⚠️ loadTokensFromStorage threw error:', err);
-    }
-
-    getCurrentUser()
-      .then((u) => {
-        console.log('📦 Context received user:', u);
+    const init = async () => {
+      try {
+        loadTokensFromStorage();
+        const u = await getCurrentUser();
 
         if (u && (u.role === 'rider' || u.role === 'customer')) {
-          setUser(u as User);
+          const safeUser: User = {
+            id: u.id,
+            email: u.email,
+            name: u.name,
+            role: u.role,
+          };
+          setUser(safeUser);
+          console.log('✅ UserContext loaded user:', safeUser);
         } else {
-          console.warn('🚫 Invalid role:', u?.role);
-          setUser(null);
+          console.warn('🚫 Invalid or missing user role:', u?.role);
+          logout();
         }
-      })
-      .catch((err) => {
-        console.error('❌ getCurrentUser failed in UserContext:', err);
-        setUser(null);
-      })
-      .finally(() => {
+      } catch (err) {
+        console.error('❌ UserContext: Failed to fetch user', err);
+        logout();
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    init();
   }, []);
 
   if (loading) {

@@ -42,7 +42,7 @@ export function loadTokensFromStorage() {
     let storedToken = localStorage.getItem('triptask_token');
     let storedRefresh = localStorage.getItem('triptask_refresh_token');
 
-    if (!storedToken) {
+    if (!storedToken || storedToken === 'undefined') {
       console.log('📦 loadTokensFromStorage: No tokens in localStorage, trying sessionStorage...');
       storedToken = sessionStorage.getItem('triptask_token');
       storedRefresh = sessionStorage.getItem('triptask_refresh_token');
@@ -50,10 +50,10 @@ export function loadTokensFromStorage() {
 
     console.log('📦 loadTokensFromStorage:', { storedToken, storedRefresh });
 
-    if (storedToken) {
+    if (storedToken && storedToken !== 'undefined') {
       setTokens({ access: storedToken, refresh: storedRefresh ?? null });
     } else {
-      console.log('📦 loadTokensFromStorage: No tokens found in either storage, clearing tokens');
+      console.log('📦 loadTokensFromStorage: No valid tokens found, clearing tokens');
       accessToken = null;
       refreshToken = null;
     }
@@ -103,7 +103,7 @@ export function logoutUser() {
  * Returns true if refresh succeeded and updated token, false otherwise
  */
 async function refreshAccessToken(): Promise<boolean> {
-  if (!refreshToken) {
+  if (!refreshToken || refreshToken === 'undefined') {
     console.warn('⚠️ refreshAccessToken: no refreshToken available');
     return false;
   }
@@ -127,13 +127,12 @@ async function refreshAccessToken(): Promise<boolean> {
     const data: { token: string } = await res.json();
     console.log('🔄 refreshAccessToken response:', data);
 
-    if (data.token) {
+    if (data.token && data.token !== 'undefined') {
       accessToken = data.token;
       try {
-        // Save refreshed token to both storages if exists
         localStorage.setItem('triptask_token', data.token);
         sessionStorage.setItem('triptask_token', data.token);
-        console.log('🔄 refreshAccessToken: new token saved to localStorage and sessionStorage');
+        console.log('🔄 refreshAccessToken: token saved to storage');
       } catch (err) {
         console.warn('⚠️ refreshAccessToken storage set failed:', err);
       }
@@ -172,6 +171,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         token = getAccessToken();
+        if (!token) return null;
+
         console.log('🔍 getCurrentUser: retrying /auth/me with refreshed token:', token);
         res = await fetch(`${API_BASE}/auth/me`, {
           method: 'GET',
@@ -231,32 +232,24 @@ export async function loginUser(
 
     const { token, refreshToken, user } = data as LoginResponse;
 
-    if (!token || !user) {
+    if (!token || !user || token === 'undefined') {
       throw new Error('Tokens or user data missing from login response');
     }
 
     setTokens({ access: token, refresh: refreshToken });
 
     if (rememberMe) {
-      try {
-        localStorage.setItem('triptask_token', token);
-        if (refreshToken) {
-          localStorage.setItem('triptask_refresh_token', refreshToken);
-        }
-        console.log('🔐 loginUser: tokens saved to localStorage');
-      } catch (err) {
-        console.warn('⚠️ loginUser localStorage set failed:', err);
-      }
+      localStorage.setItem('triptask_token', token);
+      if (refreshToken) localStorage.setItem('triptask_refresh_token', refreshToken);
+      sessionStorage.removeItem('triptask_token');
+      sessionStorage.removeItem('triptask_refresh_token');
+      console.log('🔐 loginUser: tokens saved to localStorage');
     } else {
-      try {
-        sessionStorage.setItem('triptask_token', token);
-        if (refreshToken) {
-          sessionStorage.setItem('triptask_refresh_token', refreshToken);
-        }
-        console.log('🔐 loginUser: tokens saved to sessionStorage');
-      } catch (err) {
-        console.warn('⚠️ loginUser sessionStorage set failed:', err);
-      }
+      sessionStorage.setItem('triptask_token', token);
+      if (refreshToken) sessionStorage.setItem('triptask_refresh_token', refreshToken);
+      localStorage.removeItem('triptask_token');
+      localStorage.removeItem('triptask_refresh_token');
+      console.log('🔐 loginUser: tokens saved to sessionStorage');
     }
 
     return { user, token, refreshToken };

@@ -6,7 +6,6 @@ let refreshToken: string | null = null;
 
 /**
  * Set both access and refresh tokens in memory
- * @param tokens Object containing access and refresh tokens
  */
 export const setTokens = (tokens: { access: string; refresh: string | null | undefined }) => {
   accessToken = tokens.access;
@@ -16,7 +15,6 @@ export const setTokens = (tokens: { access: string; refresh: string | null | und
 
 /**
  * Get current access token from memory
- * @returns access token or null if not set
  */
 export const getAccessToken = (): string | null => {
   console.log('🔑 getAccessToken called, returning:', accessToken);
@@ -25,7 +23,6 @@ export const getAccessToken = (): string | null => {
 
 /**
  * Get current refresh token from memory
- * @returns refresh token or null if not set
  */
 export const getRefreshToken = (): string | null => {
   console.log('🔑 getRefreshToken called, returning:', refreshToken);
@@ -44,14 +41,13 @@ export const clearTokens = () => {
 /**
  * Load tokens from localStorage or sessionStorage into memory.
  * Tries localStorage first (persistent), then sessionStorage.
- * Call this once on app startup / hydration.
  */
 export const loadTokensFromStorage = () => {
   try {
     let storedToken = localStorage.getItem('triptask_token');
     let storedRefresh = localStorage.getItem('triptask_refresh_token');
 
-    if (!storedToken) {
+    if (!storedToken || storedToken === 'undefined') {
       console.log('📦 loadTokensFromStorage: No tokens in localStorage, trying sessionStorage...');
       storedToken = sessionStorage.getItem('triptask_token');
       storedRefresh = sessionStorage.getItem('triptask_refresh_token');
@@ -59,11 +55,11 @@ export const loadTokensFromStorage = () => {
       console.log('📦 loadTokensFromStorage: Tokens found in localStorage.');
     }
 
-    if (storedToken) {
+    if (storedToken && storedToken !== 'undefined') {
       setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
       console.log('📦 loadTokensFromStorage: Tokens loaded into memory.');
     } else {
-      console.log('📦 loadTokensFromStorage: No tokens found in either storage.');
+      console.log('📦 loadTokensFromStorage: No valid tokens found, clearing memory.');
       clearTokens();
     }
   } catch (error) {
