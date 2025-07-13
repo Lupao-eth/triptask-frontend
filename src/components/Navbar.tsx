@@ -15,7 +15,20 @@ export default function Navbar() {
   const router = useRouter();
 
   useEffect(() => {
-    getCurrentUser().then(setUser);
+    getCurrentUser().then((authUser) => {
+      if (
+        authUser &&
+        (authUser.role === 'rider' || authUser.role === 'customer')
+      ) {
+        setUser({
+          id: parseInt(authUser.id, 10), // Convert string ID to number
+          email: authUser.email,
+          role: authUser.role,
+        });
+      } else {
+        setUser(null); // unsupported role like "admin" or unauthenticated
+      }
+    });
   }, []);
 
   const handleLogout = async () => {
@@ -28,7 +41,9 @@ export default function Navbar() {
       <div className="font-bold text-lg">TripTask</div>
       {user && (
         <div className="flex gap-4 items-center">
-          <span>{user.email} ({user.role})</span>
+          <span>
+            {user.email} ({user.role})
+          </span>
           <button
             onClick={handleLogout}
             className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-600 transition"
