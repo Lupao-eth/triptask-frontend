@@ -1,9 +1,12 @@
-// app/layout.tsx
+'use client';
+
+import { useEffect } from 'react';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import './globals.css';
-import { UserProvider } from '@/context/UserContext'; // ✅ Add this
+import { UserProvider } from '@/context/UserContext';
+import { loadTokensFromStorage } from '@/lib/api'; // ✅ Add this
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -25,12 +28,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  useEffect(() => {
+    loadTokensFromStorage(); // ✅ Load token into memory immediately
+  }, []);
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <UserProvider> {/* ✅ WRAPPING HERE */}
+        <UserProvider>
           {children}
           <Toaster
             position="top-center"
