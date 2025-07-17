@@ -29,7 +29,7 @@ export default function HowToUsePage() {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // ✅ Auth check using Bearer token
+  // ✅ Auth check
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -47,22 +47,27 @@ export default function HowToUsePage() {
       } catch {
         router.push('/login');
       } finally {
-        setTimeout(() => setIsLoading(false), 400); // Simulate loading
+        setTimeout(() => setIsLoading(false), 400);
       }
     };
+
     checkAuth();
   }, [router]);
 
   const goNext = () => {
-    if (slideIndex < slides.length - 1) setSlideIndex((i) => i + 1);
+    if (slideIndex < slides.length - 1) {
+      setSlideIndex((prev) => prev + 1);
+    }
   };
 
   const goBack = () => {
-    if (slideIndex > 0) setSlideIndex((i) => i - 1);
+    if (slideIndex > 0) {
+      setSlideIndex((prev) => prev - 1);
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.changedTouches[0].clientX;
+    touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -136,7 +141,7 @@ export default function HowToUsePage() {
                 </div>
               </div>
 
-              {/* Fullscreen Preview with Zoom */}
+              {/* Fullscreen Preview */}
               {previewSrc && (
                 <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex justify-center items-center transition">
                   <button
