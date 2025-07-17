@@ -1,7 +1,11 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api/backend';
+import {
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+  clearTokens,
+} from '@/lib/tokenStore';
 
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api/backend';
 
 export interface AuthUser {
   id: string;
@@ -24,66 +28,15 @@ interface ErrorResponse {
   message: string;
 }
 
-// ✅ Set tokens in memory
-export function setTokens(tokens: { access: string; refresh?: string | null }) {
-  accessToken = tokens.access;
-  refreshToken = tokens.refresh ?? null;
-  console.log('🔐 setTokens:', { accessToken, refreshToken });
-}
-
-// ✅ Load tokens from localStorage or sessionStorage
-export function loadTokensFromStorage() {
-  try {
-    let storedToken = localStorage.getItem('triptask_token');
-    let storedRefresh = localStorage.getItem('triptask_refresh_token');
-
-    if (!storedToken || storedToken === 'undefined' || storedToken === 'null' || storedToken.trim() === '') {
-      console.log('📦 loadTokensFromStorage: No tokens in localStorage, trying sessionStorage...');
-      storedToken = sessionStorage.getItem('triptask_token');
-      storedRefresh = sessionStorage.getItem('triptask_refresh_token');
-    }
-
-    console.log('📦 loadTokensFromStorage:', {
-      storedToken,
-      storedRefresh,
-    });
-
-    if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-      setTokens({ access: storedToken, refresh: storedRefresh ?? null });
-    } else {
-      console.log('📦 loadTokensFromStorage: No valid tokens found, clearing tokens');
-      accessToken = null;
-      refreshToken = null;
-    }
-  } catch (err) {
-    console.warn('⚠️ loadTokensFromStorage failed:', err);
-    accessToken = null;
-    refreshToken = null;
-  }
-}
-
-// ✅ Accessors
-export function getAccessToken(): string | null {
-  console.log('🔑 getAccessToken:', accessToken);
-  return accessToken;
-}
-
-export function getRefreshToken(): string | null {
-  console.log('🔑 getRefreshToken:', refreshToken);
-  return refreshToken;
-}
-
 // ✅ Logout
 export function logoutUser() {
-  accessToken = null;
-  refreshToken = null;
-  console.log('🚪 logoutUser: tokens cleared from memory');
+  clearTokens();
   try {
     localStorage.removeItem('triptask_token');
     localStorage.removeItem('triptask_refresh_token');
     sessionStorage.removeItem('triptask_token');
     sessionStorage.removeItem('triptask_refresh_token');
-    console.log('🚪 logoutUser: tokens cleared from localStorage and sessionStorage');
+    console.log('🚪 logoutUser: tokens cleared from storage');
   } catch (err) {
     console.warn('⚠️ logoutUser storage removal failed:', err);
   }
@@ -91,6 +44,7 @@ export function logoutUser() {
 
 // ✅ Refresh token
 async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
   if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
     console.warn('⚠️ refreshAccessToken: no refreshToken available');
     return false;
@@ -114,7 +68,7 @@ async function refreshAccessToken(): Promise<boolean> {
     console.log('🔄 refreshAccessToken response:', data);
 
     if (data.token && data.token !== 'undefined') {
-      accessToken = data.token;
+      setTokens({ access: data.token, refresh: refreshToken });
 
       try {
         localStorage.setItem('triptask_token', data.token);

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { setTokens } from '@/lib/tokenStore';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -35,9 +36,7 @@ export default function RegisterPage() {
       // Step 1: Register
       const registerRes = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
 
@@ -50,28 +49,29 @@ export default function RegisterPage() {
 
       setMessage('✅ Account created! Logging in...');
 
-      // Step 2: Auto-login after successful registration
-      const loginRes = await fetch(`${API_BASE}/auth/login`, {
+      // Step 2: Auto-login
+      const loginRes = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       const loginData = await loginRes.json();
 
-      if (!loginRes.ok || !loginData.token) {
+      if (!loginRes.ok || !loginData.accessToken) {
         setMessage('✅ Account created, but login failed. Please login manually.');
         setTimeout(() => router.push('/login'), 1500);
         return;
       }
 
-      // Step 3: Save token to localStorage
-      localStorage.setItem('triptask_token', loginData.token);
+      // ✅ FIX: Use correct keys: access, refresh
+      setTokens({
+        access: loginData.accessToken,
+        refresh: loginData.refreshToken,
+      });
 
-      // Step 4: Decode role and redirect
-      const decoded = JSON.parse(atob(loginData.token.split('.')[1]));
+      const decoded = JSON.parse(atob(loginData.accessToken.split('.')[1]));
+
       if (decoded.role === 'customer') {
         router.push('/customer/dashboard');
       } else if (decoded.role === 'rider') {

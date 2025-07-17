@@ -1,69 +1,82 @@
 // src/lib/tokenStore.ts
 
-// In-memory storage for access and refresh tokens
+// 🧠 In-memory token store
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
+
+// 🔍 Toggle to enable/disable logging
+const ENABLE_LOGS = true;
 
 /**
  * Set both access and refresh tokens in memory
  */
-export const setTokens = (tokens: { access: string; refresh: string | null | undefined }) => {
+export const setTokens = (tokens: { access: string; refresh?: string | null }) => {
   accessToken = tokens.access;
   refreshToken = tokens.refresh ?? null;
-  console.log('🔐 setTokens called:', { accessToken, refreshToken });
+  if (ENABLE_LOGS) {
+    console.log('🔐 setTokens:', { accessToken, refreshToken });
+  }
 };
 
 /**
- * Get current access token from memory
+ * Get access token from memory
  */
 export const getAccessToken = (): string | null => {
-  console.log('🔑 getAccessToken called, returning:', accessToken);
+  if (ENABLE_LOGS) {
+    console.log('🔑 getAccessToken →', accessToken);
+  }
   return accessToken;
 };
 
 /**
- * Get current refresh token from memory
+ * Get refresh token from memory
  */
 export const getRefreshToken = (): string | null => {
-  console.log('🔑 getRefreshToken called, returning:', refreshToken);
+  if (ENABLE_LOGS) {
+    console.log('🔄 getRefreshToken →', refreshToken);
+  }
   return refreshToken;
 };
 
 /**
- * Clear both tokens from memory (used on logout)
+ * Clear tokens from memory
  */
 export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
-  console.log('🚪 clearTokens called, tokens cleared');
+  if (ENABLE_LOGS) {
+    console.log('🚪 clearTokens: tokens cleared from memory');
+  }
 };
 
 /**
- * Load tokens from localStorage or sessionStorage into memory.
- * Tries localStorage first (persistent), then sessionStorage.
+ * Load tokens from localStorage or sessionStorage into memory
  */
-export const loadTokensFromStorage = () => {
+const loadTokensFromStorage = () => {
   try {
     let storedToken = localStorage.getItem('triptask_token');
     let storedRefresh = localStorage.getItem('triptask_refresh_token');
 
     if (!storedToken || storedToken === 'undefined') {
-      console.log('📦 loadTokensFromStorage: No tokens in localStorage, trying sessionStorage...');
+      if (ENABLE_LOGS) console.log('📦 No token in localStorage, trying sessionStorage...');
       storedToken = sessionStorage.getItem('triptask_token');
       storedRefresh = sessionStorage.getItem('triptask_refresh_token');
     } else {
-      console.log('📦 loadTokensFromStorage: Tokens found in localStorage.');
+      if (ENABLE_LOGS) console.log('📦 Found token in localStorage.');
     }
 
     if (storedToken && storedToken !== 'undefined') {
       setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
-      console.log('📦 loadTokensFromStorage: Tokens loaded into memory.');
+      if (ENABLE_LOGS) console.log('✅ Tokens loaded into memory.');
     } else {
-      console.log('📦 loadTokensFromStorage: No valid tokens found, clearing memory.');
+      if (ENABLE_LOGS) console.log('❌ No valid token found. Clearing memory.');
       clearTokens();
     }
   } catch (error) {
-    console.warn('⚠️ loadTokensFromStorage: Error reading tokens from storage:', error);
+    console.warn('⚠️ loadTokensFromStorage: Failed to read tokens from storage', error);
     clearTokens();
   }
 };
+
+// 🚀 Auto-load tokens on first import
+loadTokensFromStorage();
