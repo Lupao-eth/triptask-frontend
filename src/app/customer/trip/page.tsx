@@ -27,7 +27,6 @@ export default function TripServicePage() {
       }
 
       try {
-        // ✅ Use /auth/me instead of /auth/token
         const res = await fetch(`${API_BASE}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -43,25 +42,35 @@ export default function TripServicePage() {
           return router.replace('/login');
         }
 
-        setUserName(user.name); // ✅ Set actual name
+        setUserName(user.name);
       } catch (err) {
         console.error('❌ Auth error:', err);
         return router.replace('/login');
       } finally {
-        setFadeIn(true);
-        setLoading(false);
+        setTimeout(() => {
+          setFadeIn(true);
+          setLoading(false);
+        }, 400); // slight delay for smoother transition
       }
     };
 
     checkAuth();
   }, [router]);
 
+  // ✅ Loading screen with spinner
   if (loading) {
-    return <div className="p-6 font-mono text-black">Checking access...</div>;
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white text-black z-50 transition-opacity duration-500">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="text-sm font-mono">Authenticating...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="flex flex-col h-screen bg-white font-mono">
+    <main className="flex flex-col h-screen bg-white font-mono transition-opacity duration-700 ease-in-out">
       <TopBar name={userName || 'Customer'} />
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
