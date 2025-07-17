@@ -58,7 +58,7 @@ export default function LoginPage() {
 
       const freshUser = await getCurrentUser();
       if (!freshUser) {
-        setMessage('❌ Login succeeded, but user not found.');
+        setMessage('❌ Login succeeded, but user not founds.');
         return;
       }
 
