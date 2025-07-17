@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, loadTokensFromStorage, setTokens } from '@/lib/api';
+import { getCurrentUser, setTokens } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
@@ -55,7 +55,6 @@ export default function LoginPage() {
       }
 
       setTokens({ access: token, refresh: refreshToken });
-      loadTokensFromStorage(); // Optional - good for syncing state
 
       const freshUser = await getCurrentUser();
       if (!freshUser) {
