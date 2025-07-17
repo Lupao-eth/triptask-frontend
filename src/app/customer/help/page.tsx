@@ -1,12 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ChevronRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Loader2, Copy } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
 import { useEffect, useState } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+const SUPPORT_EMAIL = 'triptask0514@gmail.com';
 
 export default function HelpPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function HelpPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
   const [profileName, setProfileName] = useState('User');
+  const [copied, setCopied] = useState(false);
 
   // ✅ Validate token and fetch user profile
   useEffect(() => {
@@ -51,6 +53,32 @@ export default function HelpPage() {
       return () => clearTimeout(timer);
     }
   }, [tokenValid]);
+
+  // ✅ Inject Tawk.to chat script on mount
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://embed.tawk.to/687973d03d9d30190be7996e/1j0d6opoa';
+    script.async = true;
+    script.charset = 'UTF-8';
+    script.setAttribute('crossorigin', '*');
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(SUPPORT_EMAIL);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const openTawk = () => {
+    if (typeof window !== 'undefined' && window.Tawk_API?.toggle) {
+      window.Tawk_API.toggle();
+    }
+  };
 
   if (!tokenValid) return null;
 
@@ -101,6 +129,37 @@ export default function HelpPage() {
                   </span>
                   <ChevronRight size={20} className="ml-auto" />
                 </button>
+              </div>
+
+              {/* ✅ Contact Support Section */}
+              <div className="mt-16 text-center bg-gray-50 border border-gray-200 rounded-lg p-6 shadow-sm">
+                <h2 className="text-2xl font-bold mb-2">Need Help?</h2>
+                <p className="mb-6 text-gray-600">
+                  If you have any questions, feel free to reach out to our support team.
+                </p>
+
+                <button
+                  onClick={openTawk}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-6 py-3 rounded-lg transition mb-4 shadow"
+                >
+                  💬 Contact Us
+                </button>
+
+                <div className="text-sm text-gray-700 mt-2">
+                  or email us at:
+                  <div className="mt-2 inline-flex items-center bg-white border border-gray-300 px-3 py-2 rounded-md shadow-sm">
+                    <span className="mr-2">{SUPPORT_EMAIL}</span>
+                    <button
+                      onClick={handleCopy}
+                      className="text-blue-600 hover:text-blue-800 transition"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    {copied && (
+                      <span className="ml-2 text-green-500 text-xs">Copied!</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </>
           )}
