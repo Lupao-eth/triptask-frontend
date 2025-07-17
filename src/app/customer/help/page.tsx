@@ -13,8 +13,9 @@ export default function HelpPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [tokenValid, setTokenValid] = useState(false);
+  const [profileName, setProfileName] = useState('User');
 
-  // ✅ Validate token from localStorage
+  // ✅ Validate token and fetch user profile
   useEffect(() => {
     const validateToken = async () => {
       const savedToken = localStorage.getItem('triptask_token');
@@ -31,24 +32,26 @@ export default function HelpPage() {
         });
 
         if (!res.ok) throw new Error('Invalid token');
+
+        const data = await res.json();
+        setProfileName(data?.user?.name || 'User');
         setTokenValid(true);
       } catch {
-  router.push('/login');
-}
-
+        router.push('/login');
+      }
     };
 
     validateToken();
   }, [router]);
 
-  // Simulated loading for animation
+  // Simulated loading
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 400);
     return () => clearTimeout(timer);
   }, []);
 
   if (!tokenValid) {
-    return null; // Prevent render until token check completes
+    return null; // Prevent render
   }
 
   return (
@@ -58,7 +61,7 @@ export default function HelpPage() {
     >
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
-        <TopBar name="User" />
+        <TopBar name={profileName} />
         <main className="flex-1 p-6 pt-24">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">

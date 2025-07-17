@@ -22,6 +22,7 @@ export default function HowToUsePage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [userName, setUserName] = useState('User');
   const [slideIndex, setSlideIndex] = useState(0);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
@@ -29,7 +30,7 @@ export default function HowToUsePage() {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // ✅ Auth check — using correct response structure
+  // ✅ Fetch user name from /auth/me
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -41,11 +42,13 @@ export default function HowToUsePage() {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
 
-        // ✅ Correct property path
         if (!data.user || data.user.role !== 'customer') {
           router.push('/not-authorized');
           return;
         }
+
+        // ✅ Set profile name
+        setUserName(data.user.name || 'User');
       } catch {
         router.push('/login');
       } finally {
@@ -80,7 +83,7 @@ export default function HowToUsePage() {
     <div className="flex min-h-screen bg-white text-black" style={{ fontFamily: 'var(--font-geist-mono)' }}>
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
-        <TopBar name="User" />
+        <TopBar name={userName} />
         <main className="flex-1 p-6 pt-24">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -90,7 +93,11 @@ export default function HowToUsePage() {
             <>
               {/* Header */}
               <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-yellow-200 transition" aria-label="Go back">
+                <button
+                  onClick={() => router.back()}
+                  className="ml-1 p-2 rounded-full hover:bg-yellow-200 transition"
+                  aria-label="Go back"
+                >
                   <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-3xl font-bold">How to Use?</h1>
@@ -136,7 +143,14 @@ export default function HowToUsePage() {
               {/* Preview Modal */}
               {previewSrc && (
                 <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex justify-center items-center">
-                  <button onClick={() => { setPreviewSrc(null); setZoomed(false); }} className="absolute top-4 right-4 text-white text-3xl" aria-label="Close preview">
+                  <button
+                    onClick={() => {
+                      setPreviewSrc(null);
+                      setZoomed(false);
+                    }}
+                    className="absolute top-4 right-4 text-white text-3xl"
+                    aria-label="Close preview"
+                  >
                     <X size={32} />
                   </button>
                   <img

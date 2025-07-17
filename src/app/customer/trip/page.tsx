@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '../dashboard/TopBar';
 import SideMenu from '../dashboard/SideMenu';
-import { loadTokensFromStorage } from '@/lib/api'; // ✅ Corrected
+import { loadTokensFromStorage } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -12,11 +12,12 @@ export default function TripServicePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [fadeIn, setFadeIn] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     const checkAuth = async () => {
-      const tokens = loadTokensFromStorage(); // ✅ 7-hour logic
+      const tokens = loadTokensFromStorage();
       const token = tokens?.accessToken;
 
       if (!token) {
@@ -26,20 +27,23 @@ export default function TripServicePage() {
       }
 
       try {
-        const res = await fetch(`${API_BASE}/auth/token`, {
+        // ✅ Use /auth/me instead of /auth/token
+        const res = await fetch(`${API_BASE}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!res.ok) throw new Error('Token fetch failed');
+        if (!res.ok) throw new Error('Failed to fetch user info');
 
         const data = await res.json();
-        const decoded = JSON.parse(atob(data.token.split('.')[1]));
+        const user = data.user;
 
-        if (decoded.role !== 'customer') {
+        if (user.role !== 'customer') {
           return router.replace('/login');
         }
+
+        setUserName(user.name); // ✅ Set actual name
       } catch (err) {
         console.error('❌ Auth error:', err);
         return router.replace('/login');
@@ -58,7 +62,7 @@ export default function TripServicePage() {
 
   return (
     <main className="flex flex-col h-screen bg-white font-mono">
-      <TopBar name="Customer" />
+      <TopBar name={userName || 'Customer'} />
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className="flex-1 flex items-center justify-center px-4">

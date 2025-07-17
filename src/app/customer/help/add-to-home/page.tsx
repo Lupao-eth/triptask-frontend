@@ -14,15 +14,16 @@ export default function AddToHomePage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [userName, setUserName] = useState('User');
 
-  // Verify token and user role
+  // ✅ Verify token and fetch user name
   useEffect(() => {
     const verifyUser = async () => {
       const token = getAccessToken();
       if (!token) return router.push('/login');
 
       try {
-        const res = await fetch(`${API_BASE}/auth/token`, {
+        const res = await fetch(`${API_BASE}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -31,10 +32,11 @@ export default function AddToHomePage() {
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
 
-        const decoded = JSON.parse(atob(data.token.split('.')[1]));
-        if (decoded.role !== 'customer') {
+        if (data?.user?.role !== 'customer') {
           return router.push('/not-authorized');
         }
+
+        setUserName(data.user.name || 'Customer');
       } catch {
         router.push('/login');
       } finally {
@@ -52,7 +54,7 @@ export default function AddToHomePage() {
     >
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
-        <TopBar name="User" />
+        <TopBar name={userName} />
 
         <main className="flex-1 p-6 pt-24">
           {isLoading ? (
@@ -68,7 +70,7 @@ export default function AddToHomePage() {
                   className="p-2 rounded-full hover:bg-yellow-200 transition"
                   aria-label="Go back"
                 >
-                  <ArrowLeft size={20} />
+                  <ArrowLeft size={20} className="text-black" />
                 </button>
                 <h1 className="text-3xl font-bold">Add to Home Screen</h1>
               </div>
