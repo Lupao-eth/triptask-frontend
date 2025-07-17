@@ -15,8 +15,21 @@ export default function RootLayoutClient({
   const pathname = usePathname();
 
   useEffect(() => {
+    // 🔍 Intercept all blob creations globally
+    if (typeof window !== 'undefined') {
+      const originalCreateObjectURL = URL.createObjectURL;
+
+      URL.createObjectURL = function (blob) {
+        const url = originalCreateObjectURL.call(URL, blob);
+        console.log('🧨 Blob created:', url);
+        console.trace('👣 Blob created here');
+        return url;
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     const timeout = setTimeout(() => {
-      // ✅ Avoid auto-logout during login flow
       if (!pathname.startsWith('/login')) {
         loadTokensFromStorage();
         const token = getAccessToken();

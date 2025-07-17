@@ -23,8 +23,6 @@ export default function TutorialModal({ onClose }: { onClose: () => void }) {
   const [zoom, setZoom] = useState(1);
   const touchStartX = useRef<number | null>(null);
 
-  // 🧹 Removed useEffect that did token/role checking
-
   useEffect(() => {
     setFade(false);
     const timer = setTimeout(() => setFade(true), 100);
@@ -57,6 +55,10 @@ export default function TutorialModal({ onClose }: { onClose: () => void }) {
   };
 
   const resetZoom = () => setZoom(1);
+
+  useEffect(() => {
+    if (!previewOpen) resetZoom();
+  }, [previewOpen]);
 
   return (
     <>
@@ -132,10 +134,7 @@ export default function TutorialModal({ onClose }: { onClose: () => void }) {
             onClick={resetZoom}
           >
             <button
-              onClick={() => {
-                setPreviewOpen(false);
-                resetZoom();
-              }}
+              onClick={() => setPreviewOpen(false)}
               className="absolute top-6 right-6 text-white hover:text-yellow-300 transition z-10"
               aria-label="Close Fullscreen"
             >
