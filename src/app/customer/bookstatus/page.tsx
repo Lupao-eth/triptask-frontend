@@ -141,12 +141,6 @@ const BookStatus = () => {
     <main className="min-h-screen bg-gray-50 pt-16 font-mono">
       <TopBar name={user?.name || 'Customer'} />
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-      <button
-        className="fixed top-4 left-4 z-50 text-2xl text-black"
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
-        ☰
-      </button>
 
       <div className="p-4 sm:p-6 max-w-4xl mx-auto text-black">
         <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Book Status</h1>
