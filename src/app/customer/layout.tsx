@@ -148,8 +148,35 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   };
 
   if (!hydrated || isLoadingUser) {
-    return <div className="p-4 text-center text-gray-500 font-mono">Authenticating...</div>;
-  }
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-white font-mono">
+      <div className="flex flex-col items-center">
+        <svg
+          className="animate-spin h-12 w-12 text-yellow-500 mb-4"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          ></circle>
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+        <p className="text-lg text-gray-600 animate-pulse">Authenticating your session...</p>
+      </div>
+    </div>
+  );
+}
+
 
   return (
     <div>

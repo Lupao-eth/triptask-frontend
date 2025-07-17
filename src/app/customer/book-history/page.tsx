@@ -114,7 +114,7 @@ const BookHistory = () => {
       {/* Content */}
       <div className="p-4 sm:p-6 max-w-4xl mx-auto">
         {loading ? (
-          <div className="text-center text-gray-500">🔄 Loading...</div>
+          <div className="text-center text-gray-500">Loading...</div>
         ) : filteredTasks.length === 0 ? (
           <div className="text-center text-gray-500">No {activeTab} tasks found.</div>
         ) : (

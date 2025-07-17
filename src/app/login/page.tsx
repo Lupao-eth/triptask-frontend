@@ -26,7 +26,7 @@ export default function LoginPage() {
     }
 
     setLoading(true);
-    setMessage('🔐 Logging in...');
+    setMessage('Logging in...');
 
     try {
       const res = await fetch(`${API_BASE}/auth/token`, {
@@ -46,7 +46,7 @@ export default function LoginPage() {
       // Always store tokens persistently
       localStorage.setItem('triptask_token', token);
       localStorage.setItem('triptask_refresh_token', refreshToken || '');
-      localStorage.removeItem('triptask_expire_at'); // Clear any old expiration key if present
+      localStorage.removeItem('triptask_expire_at');
 
       setTokens({ access: token, refresh: refreshToken });
 
@@ -57,7 +57,7 @@ export default function LoginPage() {
       }
 
       setUser(freshUser);
-      setMessage('✅ Login successful! Redirecting...');
+      setMessage('Login successful! Redirecting...');
 
       const roleToPath: Record<string, string> = {
         rider: '/rider/dashboard',
