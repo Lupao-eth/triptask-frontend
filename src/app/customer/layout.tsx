@@ -44,21 +44,22 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   // ✅ Validate user when token is set
   useEffect(() => {
+  const validateUser = async () => {
     if (!token) return;
 
-    const validateUser = async () => {
-      try {
-        const user = await getCurrentUser();
-        console.log('✅ Authenticated user:', user);
-        setIsLoadingUser(false);
-      } catch (err) {
-        console.error('❌ Invalid token or auth failed:', err);
-        router.replace('/login');
-      }
-    };
+    try {
+      const user = await getCurrentUser();
+      console.log('✅ Authenticated user:', user);
+      setIsLoadingUser(false);
+    } catch (err) {
+      console.error('❌ Invalid token or auth failed:', err);
+      router.replace('/login');
+    }
+  };
 
-    validateUser();
-  }, [token, router]);
+  validateUser();
+}, [token, router]);
+
 
   // ✅ Handle socket connection and service status
   useEffect(() => {
