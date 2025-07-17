@@ -9,6 +9,15 @@ import { useEffect, useState } from 'react';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const SUPPORT_EMAIL = 'triptask0514@gmail.com';
 
+declare global {
+  interface Window {
+    Tawk_API?: {
+      toggle?: () => void;
+      [key: string]: unknown;
+    };
+  }
+}
+
 export default function HelpPage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,7 +26,6 @@ export default function HelpPage() {
   const [profileName, setProfileName] = useState('User');
   const [copied, setCopied] = useState(false);
 
-  // ✅ Validate token and fetch user profile
   useEffect(() => {
     const validateToken = async () => {
       const savedToken = localStorage.getItem('triptask_token');
@@ -46,7 +54,6 @@ export default function HelpPage() {
     validateToken();
   }, [router]);
 
-  // ✅ Loading after authentication
   useEffect(() => {
     if (tokenValid) {
       const timer = setTimeout(() => setIsLoading(false), 300);
@@ -54,8 +61,11 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
-  // ✅ Inject Tawk.to chat script on mount
+  // ✅ Load Tawk script manually (but hidden by default)
   useEffect(() => {
+    const existingScript = document.querySelector('script[src*="tawk.to"]');
+    if (existingScript) return;
+
     const script = document.createElement('script');
     script.src = 'https://embed.tawk.to/687973d03d9d30190be7996e/1j0d6opoa';
     script.async = true;
@@ -135,7 +145,7 @@ export default function HelpPage() {
               <div className="mt-16 text-center bg-gray-50 border border-gray-200 rounded-lg p-6 shadow-sm">
                 <h2 className="text-2xl font-bold mb-2">Need Help?</h2>
                 <p className="mb-6 text-gray-600">
-                  If you have any questions, feel free to reach out to our support team.
+                  If you have any questions, feel free to reach out to our support.
                 </p>
 
                 <button
