@@ -71,7 +71,7 @@ const BookHistory = () => {
   const filteredTasks = tasks.filter((task) => task.status === activeTab);
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-16 font-mono text-black">
+    <main className="min-h-screen bg-gray-50 pt-20 font-mono text-black">
       <TopBar name={user?.name || 'Customer'} />
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
@@ -79,7 +79,7 @@ const BookHistory = () => {
       <div className="relative flex items-center justify-center mb-6 px-4 sm:px-6 max-w-4xl mx-auto">
         <button
           onClick={() => router.push('/customer/dashboard')}
-          className="absolute left-0 text-black hover:text-yellow-800 text-2xl font-bold px-2"
+          className="absolute left-3 text-black hover:text-yellow-800 text-2xl font-bold"
           aria-label="Go back"
         >
           {'<'}
