@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
+import { getAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const slides = [
@@ -28,17 +29,18 @@ export default function HowToUsePage() {
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // Auth check
+  // ✅ Auth check using Bearer token
   useEffect(() => {
-    const getToken = async () => {
+    const checkAuth = async () => {
       try {
-        const res = await fetch(`${API_BASE}/auth/token`, {
-          credentials: 'include',
+        const token = getAccessToken();
+        if (!token) throw new Error('No token');
+        const res = await fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
-        const decoded = JSON.parse(atob(data.token.split('.')[1]));
-        if (decoded.role !== 'customer') {
+        if (data.role !== 'customer') {
           router.push('/not-authorized');
           return;
         }
@@ -48,7 +50,7 @@ export default function HowToUsePage() {
         setTimeout(() => setIsLoading(false), 400); // Simulate loading
       }
     };
-    getToken();
+    checkAuth();
   }, [router]);
 
   const goNext = () => {

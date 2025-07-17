@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, X } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
+import { getAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -17,16 +18,22 @@ export default function AddToHomePage() {
   // Verify token and user role
   useEffect(() => {
     const verifyUser = async () => {
+      const token = getAccessToken();
+      if (!token) return router.push('/login');
+
       try {
         const res = await fetch(`${API_BASE}/auth/token`, {
-          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
+
         if (!res.ok) throw new Error('Unauthorized');
         const data = await res.json();
+
         const decoded = JSON.parse(atob(data.token.split('.')[1]));
         if (decoded.role !== 'customer') {
-          router.push('/not-authorized');
-          return;
+          return router.push('/not-authorized');
         }
       } catch {
         router.push('/login');
