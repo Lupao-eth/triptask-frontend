@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { UserProvider } from '@/context/UserContext';
+import { loadTokensFromStorage } from '@/lib/tokenStore'; // 👈 make sure it's imported
 
 export default function RootLayoutClient({
   children,
@@ -12,16 +13,16 @@ export default function RootLayoutClient({
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    // ✅ Optional delay to let localStorage/sessionStorage sync properly
     const timeout = setTimeout(() => {
+      loadTokensFromStorage(); // ✅ load tokens only after we're sure storage is ready
       setHydrated(true);
-    }, 10); // Delay in milliseconds (adjust as needed)
+    }, 10);
 
     return () => clearTimeout(timeout);
   }, []);
 
   if (!hydrated) {
-    return null; // ⏳ Prevent premature render until hydration is ready
+    return null;
   }
 
   return (

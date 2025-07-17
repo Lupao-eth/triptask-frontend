@@ -18,7 +18,6 @@ export const setTokens = (tokens: { access: string; refresh: string | null | und
  * Get current access token from memory
  */
 export const getAccessToken = (): string | null => {
-  console.log('🔑 getAccessToken called, returning:', accessToken);
   return accessToken;
 };
 
@@ -26,22 +25,25 @@ export const getAccessToken = (): string | null => {
  * Get current refresh token from memory
  */
 export const getRefreshToken = (): string | null => {
-  console.log('🔑 getRefreshToken called, returning:', refreshToken);
   return refreshToken;
 };
 
 /**
- * Clear both tokens from memory and storage (optional)
+ * Clear both tokens from memory and storage
  */
 export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
   console.log('🚪 clearTokens called, tokens cleared');
 
-  localStorage.removeItem('triptask_token');
-  localStorage.removeItem('triptask_refresh_token');
-  sessionStorage.removeItem('triptask_token');
-  sessionStorage.removeItem('triptask_refresh_token');
+  try {
+    localStorage.removeItem('triptask_token');
+    localStorage.removeItem('triptask_refresh_token');
+  } catch {}
+  try {
+    sessionStorage.removeItem('triptask_token');
+    sessionStorage.removeItem('triptask_refresh_token');
+  } catch {}
 };
 
 /**
@@ -96,9 +98,9 @@ const attemptTokenRefresh = async (refresh: string) => {
 
     setTokens({ access: data.accessToken, refresh: data.refreshToken });
 
-    // Decide storage based on where the refresh token was found
-    const useLocal = !!localStorage.getItem('triptask_refresh_token');
-    const storage = useLocal ? localStorage : sessionStorage;
+    // Save to the same storage where it came from
+    const fromLocal = !!localStorage.getItem('triptask_refresh_token');
+    const storage = fromLocal ? localStorage : sessionStorage;
 
     storage.setItem('triptask_token', data.accessToken);
     storage.setItem('triptask_refresh_token', data.refreshToken);

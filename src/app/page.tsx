@@ -1,18 +1,27 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser, loadTokensFromStorage } from '../lib/api';
 
 export default function HomePage() {
   const router = useRouter();
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      loadTokensFromStorage(); // ✅ Ensure storage is available first
+      setHydrated(true);
+    }, 10);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+
     async function redirectUser() {
       try {
-        // ✅ Load tokens into memory first (important for Safari/localStorage-based auth)
-        loadTokensFromStorage();
-
         const user = await getCurrentUser();
 
         if (user?.role === 'rider') {
@@ -20,7 +29,7 @@ export default function HomePage() {
         } else if (user?.role === 'customer') {
           router.replace('/customer/dashboard');
         } else {
-          router.replace('/login'); // No user or unknown role
+          router.replace('/login');
         }
       } catch (err) {
         console.error('Auth check failed:', err);
@@ -29,7 +38,7 @@ export default function HomePage() {
     }
 
     redirectUser();
-  }, [router]);
+  }, [hydrated, router]);
 
   return (
     <div className="p-4 text-center text-yellow-800 font-mono">
