@@ -3,9 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
-import { useRouter } from 'next/navigation';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const slides = [
   { src: '/images/help/home-page.png', title: 'How to book' },
   { src: '/images/help/booknow.png', title: 'Input information' },
@@ -19,40 +17,13 @@ const slides = [
 ];
 
 export default function TutorialModal({ onClose }: { onClose: () => void }) {
-  const router = useRouter();
   const [index, setIndex] = useState(0);
   const [fade, setFade] = useState(true);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const touchStartX = useRef<number | null>(null);
 
-  // ✅ Role-based access guard using Bearer token from localStorage
-  useEffect(() => {
-    const verifyUser = async () => {
-      const token = localStorage.getItem('triptask_token');
-      if (!token) return router.push('/login');
-
-      try {
-        const res = await fetch(`${API_BASE}/auth/token`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error('Unauthorized');
-
-        const data = await res.json();
-        const decoded = JSON.parse(atob(data.token.split('.')[1]));
-
-        if (decoded.role !== 'customer') {
-          router.push('/not-authorized');
-        }
-      } catch {
-        router.push('/login');
-      }
-    };
-
-    verifyUser();
-  }, [router]);
+  // 🧹 Removed useEffect that did token/role checking
 
   useEffect(() => {
     setFade(false);
@@ -137,7 +108,7 @@ export default function TutorialModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <button
-            onClick={() => router.push('/customer/help')}
+            onClick={() => window.open('/customer/help', '_blank')}
             className="mt-6 w-full bg-gray-800 hover:bg-black text-white py-2 rounded-lg font-semibold transition"
           >
             Go to Help
