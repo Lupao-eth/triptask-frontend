@@ -13,9 +13,11 @@ const SUPPORT_EMAIL = 'triptask0514@gmail.com';
 declare global {
   interface Window {
     Tawk_API?: {
-      toggle?: () => void;
-      [key: string]: unknown;
-    };
+  toggle?: () => void;
+  onLoad?: () => void;
+  [key: string]: unknown;
+};
+
   }
 }
 
