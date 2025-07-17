@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import TopBar from './TopBar';
 import TutorialModal from './TutorialModal';
 import TermsModal from './TermsModal';
-import { getAccessToken } from '@/lib/api'; // ✅ Import token loader
+import { getAccessToken } from '@/lib/api';
 
 type User = {
   id: string;
@@ -27,10 +27,13 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = getAccessToken(); // ✅ Looks in sessionStorage or localStorage
+      const token = getAccessToken(); // ✅ Get token from memory/storage
+
+      console.log('🔍 useEffect triggered');
+      console.log('🧪 Token from getAccessToken:', token);
 
       if (!token) {
-        console.warn('❌ No token found in storage');
+        console.warn('❌ No token found. Redirecting to /login...');
         router.push('/login');
         return;
       }
@@ -42,13 +45,17 @@ export default function CustomerDashboard() {
           },
         });
 
+        console.log('📡 /auth/me response status:', res.status);
+
         if (!res.ok) {
-          throw new Error('Unauthorized');
+          throw new Error(`Unauthorized (HTTP ${res.status})`);
         }
 
         const data = await res.json();
+        console.log('✅ User data from /auth/me:', data);
 
         if (data.user.role !== 'customer') {
+          console.warn('⛔ User role is not customer. Redirecting to /not-authorized...');
           router.push('/not-authorized');
           return;
         }
@@ -60,12 +67,14 @@ export default function CustomerDashboard() {
         const seenTutorial = localStorage.getItem('seenTutorial');
 
         if (!seenTerms) {
+          console.log('📄 Showing terms modal');
           setShowTerms(true);
         } else if (!seenTutorial) {
+          console.log('🎥 Showing tutorial modal');
           setShowTutorial(true);
         }
       } catch (err) {
-        console.error('❗ Failed to fetch user:', err);
+        console.error('❗ Error during fetchUser:', err);
         router.push('/login');
       }
     };
@@ -74,26 +83,31 @@ export default function CustomerDashboard() {
   }, [router]);
 
   const handleAgreeToTerms = () => {
+    console.log('✅ User agreed to terms');
     localStorage.setItem('seenTerms', 'true');
     setShowTerms(false);
 
     const seenTutorial = localStorage.getItem('seenTutorial');
     if (!seenTutorial) {
+      console.log('🎥 Showing tutorial modal after agreeing to terms');
       setShowTutorial(true);
     }
   };
 
   const handleGoToTask = () => {
+    console.log('➡️ Navigating to /customer/task');
     setNavigatingTask(true);
     router.push('/customer/task');
   };
 
   const handleGoToTrip = () => {
+    console.log('➡️ Navigating to /customer/trip');
     setNavigatingTrip(true);
     router.push('/customer/trip');
   };
 
   if (loading) {
+    console.log('⏳ Still loading...');
     return (
       <div className="flex items-center justify-center h-screen w-full bg-yellow-100 text-yellow-800 font-mono px-4">
         <div className="flex flex-col items-center space-y-4 text-center">
@@ -104,7 +118,10 @@ export default function CustomerDashboard() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    console.log('👻 No user found after loading');
+    return null;
+  }
 
   return (
     <main
@@ -145,6 +162,7 @@ export default function CustomerDashboard() {
       {showTutorial && (
         <TutorialModal
           onClose={() => {
+            console.log('✅ Tutorial finished');
             localStorage.setItem('seenTutorial', 'true');
             setShowTutorial(false);
           }}
