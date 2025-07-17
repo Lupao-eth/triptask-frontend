@@ -3,11 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  getCurrentUser,
-  loadTokensFromStorage,
-  setTokens,
-} from '@/lib/api';
+import { getCurrentUser, loadTokensFromStorage, setTokens } from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
@@ -48,7 +44,6 @@ export default function LoginPage() {
 
       const { token, refreshToken } = data;
 
-      // ✅ Save to localStorage only (no more sessionStorage)
       localStorage.setItem('triptask_token', token);
       localStorage.setItem('triptask_refresh_token', refreshToken || '');
 
@@ -59,11 +54,10 @@ export default function LoginPage() {
         localStorage.removeItem('triptask_expire_at');
       }
 
-      loadTokensFromStorage(); // optional
       setTokens({ access: token, refresh: refreshToken });
+      loadTokensFromStorage(); // Optional - good for syncing state
 
       const freshUser = await getCurrentUser();
-
       if (!freshUser) {
         setMessage('❌ Login succeeded, but user not found.');
         return;
@@ -72,16 +66,15 @@ export default function LoginPage() {
       setUser(freshUser);
       setMessage('✅ Login successful! Redirecting...');
 
-      const { role } = freshUser;
       const roleToPath: Record<string, string> = {
         rider: '/rider/dashboard',
         customer: '/customer/dashboard',
         admin: '/admin/dashboard',
       };
 
-      router.push(roleToPath[role] || '/');
+      router.push(roleToPath[freshUser.role] || '/');
     } catch (err) {
-      console.error('❌ LoginPage error:', err);
+      console.error('❌ Login error:', err);
       setMessage('❌ Something went wrong. Please try again.');
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import { UserProvider } from '@/context/UserContext';
 import { loadTokensFromStorage, getAccessToken, logoutUser } from '@/lib/api';
@@ -11,21 +12,25 @@ export default function RootLayoutClient({
   children: React.ReactNode;
 }) {
   const [hydrated, setHydrated] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      loadTokensFromStorage(); // ✅ Also handles 7-hour expiration internally
-      const token = getAccessToken();
+      // ✅ Avoid auto-logout during login flow
+      if (!pathname.startsWith('/login')) {
+        loadTokensFromStorage();
+        const token = getAccessToken();
 
-      if (!token) {
-        logoutUser(); // ⛔ Expired token — clean up just in case
+        if (!token) {
+          logoutUser(); // ⛔ No token or expired — logout only if not logging in
+        }
       }
 
       setHydrated(true);
     }, 10);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [pathname]);
 
   if (!hydrated) return null;
 
