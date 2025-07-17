@@ -59,7 +59,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Loading Screen */}
+      {/* Loading Overlay */}
       {isNavigating && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center font-mono">
           <Loader2 className="w-10 h-10 animate-spin text-yellow-500 mb-4" />
@@ -67,7 +67,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      {/* Overlay */}
+      {/* Background Blur Overlay */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -95,7 +95,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
 
         <nav className="flex flex-col gap-2 p-4 text-base">
           <button
-            onClick={() => goTo('/customer/dashboard')}
+            onClick={() => goTo('/customer/dashboard', true)} // ✅ loading
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <Home size={20} /> Home
@@ -106,42 +106,42 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
           </div>
 
           <button
-            onClick={() => goTo('/customer/trip', true)} // show loading
+            onClick={() => goTo('/customer/trip')} // ❌ no loading
             className="flex items-center gap-3 pl-12 pr-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <MapPin size={20} /> Trip
           </button>
 
           <button
-            onClick={() => goTo('/customer/task')}
+            onClick={() => goTo('/customer/task', true)} // ✅ loading
             className="flex items-center gap-3 pl-12 pr-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <ClipboardList size={20} /> Task
           </button>
 
           <button
-            onClick={() => goTo('/customer/bookstatus')}
+            onClick={() => goTo('/customer/bookstatus', true)} // ✅ loading
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <CalendarCheck size={20} /> Book Status
           </button>
 
           <button
-            onClick={() => goTo('/customer/chat')}
+            onClick={() => goTo('/customer/chat', true)} // ✅ loading
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <MessageCircle size={20} /> Chat
           </button>
 
           <button
-            onClick={() => goTo('/customer/book-history')}
+            onClick={() => goTo('/customer/book-history', true)} // ✅ loading
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <Clock size={20} /> Book History
           </button>
 
           <button
-            onClick={() => goTo('/customer/help', true)} // show loading
+            onClick={() => goTo('/customer/help')} // ❌ no loading
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <HelpCircle size={20} /> Help
