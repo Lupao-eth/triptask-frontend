@@ -3,6 +3,13 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api/backend';
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 
+const TOKEN_KEY = 'triptask_token';
+const REFRESH_TOKEN_KEY = 'triptask_refresh_token';
+const REMEMBER_ME_KEY = 'triptask_remember';
+const TOKEN_TIMESTAMP_KEY = 'triptask_token_created';
+
+const TOKEN_EXPIRATION_HOURS = 7;
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -24,6 +31,19 @@ interface ErrorResponse {
   message: string;
 }
 
+function isTokenExpired(): boolean {
+  const remember = localStorage.getItem(REMEMBER_ME_KEY);
+  if (remember === 'true') return false;
+
+  const createdAt = localStorage.getItem(TOKEN_TIMESTAMP_KEY);
+  if (!createdAt) return true;
+
+  const createdTime = new Date(createdAt).getTime();
+  const now = Date.now();
+  const diffHours = (now - createdTime) / (1000 * 60 * 60);
+  return diffHours > TOKEN_EXPIRATION_HOURS;
+}
+
 export function setTokens(tokens: { access: string; refresh?: string | null }) {
   if (!tokens.access || tokens.access === 'undefined' || tokens.access === 'null') {
     console.warn('🚫 setTokens: Invalid access token');
@@ -37,36 +57,30 @@ export function setTokens(tokens: { access: string; refresh?: string | null }) {
   console.log('🔐 setTokens:', { accessToken, refreshToken });
 }
 
-export function loadTokensFromStorage(): { token: string | null; refresh: string | null } {
+// ✅ Fixed return type to match returned keys
+export function loadTokensFromStorage(): { accessToken: string | null; refreshToken: string | null } {
   try {
-    let storedToken = localStorage.getItem('triptask_token');
-    let storedRefresh = localStorage.getItem('triptask_refresh_token');
-    let storageType = 'localStorage';
+    const token = localStorage.getItem(TOKEN_KEY);
+    const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
 
-    if (!storedToken || storedToken === 'undefined' || storedToken === 'null' || storedToken.trim() === '') {
-      storedToken = sessionStorage.getItem('triptask_token');
-      storedRefresh = sessionStorage.getItem('triptask_refresh_token');
-      storageType = 'sessionStorage';
-    }
-
-    if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-      console.log(`📦 loadTokensFromStorage: Found tokens in ${storageType}`);
-      setTokens({ access: storedToken, refresh: storedRefresh ?? null });
-      return { token: storedToken, refresh: storedRefresh ?? null };
-    } else {
-      console.log('📦 loadTokensFromStorage: No valid tokens, clearing memory');
+    if (!token || token === 'undefined' || token === 'null' || isTokenExpired()) {
+      console.log('📦 loadTokensFromStorage: No valid token or token expired');
       accessToken = null;
       refreshToken = null;
-      return { token: null, refresh: null };
+      logoutUser();
+      return { accessToken: null, refreshToken: null };
     }
+
+    console.log('📦 loadTokensFromStorage: Loaded from localStorage');
+    setTokens({ access: token, refresh: refresh ?? null });
+    return { accessToken: token, refreshToken: refresh ?? null };
   } catch (err) {
     console.warn('⚠️ loadTokensFromStorage failed:', err);
     accessToken = null;
     refreshToken = null;
-    return { token: null, refresh: null };
+    return { accessToken: null, refreshToken: null };
   }
 }
-
 
 export function getAccessToken(): string | null {
   console.log('🔑 getAccessToken:', accessToken);
@@ -81,26 +95,25 @@ export function getRefreshToken(): string | null {
 export function logoutUser() {
   accessToken = null;
   refreshToken = null;
-  console.log('🚪 logoutUser: tokens cleared from memory');
   try {
-    localStorage.removeItem('triptask_token');
-    localStorage.removeItem('triptask_refresh_token');
-    sessionStorage.removeItem('triptask_token');
-    sessionStorage.removeItem('triptask_refresh_token');
-    console.log('🚪 logoutUser: tokens cleared from both storages');
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(REMEMBER_ME_KEY);
+    localStorage.removeItem(TOKEN_TIMESTAMP_KEY);
+    console.log('🚪 logoutUser: tokens and flags cleared');
   } catch (err) {
-    console.warn('⚠️ logoutUser storage removal failed:', err);
+    console.warn('⚠️ logoutUser error:', err);
   }
 }
 
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
-    console.warn('⚠️ refreshAccessToken: no refreshToken available');
+    console.warn('⚠️ refreshAccessToken: No refresh token available');
     return false;
   }
 
   try {
-    console.log('🔄 refreshAccessToken: sending refresh request...');
+    console.log('🔄 refreshAccessToken: Sending request');
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -114,21 +127,21 @@ async function refreshAccessToken(): Promise<boolean> {
     }
 
     const data: { token: string; refreshToken?: string } = await res.json();
-    console.log('🔄 refreshAccessToken response:', data);
-
     if (data.token && data.token !== 'undefined') {
       accessToken = data.token;
+      localStorage.setItem(TOKEN_KEY, data.token);
 
-      const isInLocal = !!localStorage.getItem('triptask_refresh_token');
-      const storage = isInLocal ? localStorage : sessionStorage;
-
-      storage.setItem('triptask_token', data.token);
       if (data.refreshToken) {
-        storage.setItem('triptask_refresh_token', data.refreshToken);
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
         refreshToken = data.refreshToken;
       }
 
-      console.log(`🔄 refreshAccessToken: tokens updated in ${isInLocal ? 'localStorage' : 'sessionStorage'}`);
+      const remember = localStorage.getItem(REMEMBER_ME_KEY);
+      if (remember !== 'true') {
+        localStorage.setItem(TOKEN_TIMESTAMP_KEY, new Date().toISOString());
+      }
+
+      console.log('🔄 refreshAccessToken: Tokens updated');
       return true;
     }
   } catch (err) {
@@ -142,13 +155,14 @@ async function refreshAccessToken(): Promise<boolean> {
 export async function getCurrentUser(): Promise<AuthUser | null> {
   let token = getAccessToken();
   if (!token) {
-    console.warn('⚠️ getCurrentUser: No access token available');
-    return null;
+    console.warn('⚠️ getCurrentUser: No token, trying storage');
+    const stored = loadTokensFromStorage();
+    token = stored.accessToken;
+    if (!token) return null;
   }
 
   try {
-    console.log('🔍 getCurrentUser: using token', token);
-    let res = await fetch(`${API_BASE}/auth/me`, {
+    const res = await fetch(`${API_BASE}/auth/me`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -161,10 +175,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
       token = getAccessToken();
       if (!token) return null;
 
-      res = await fetch(`${API_BASE}/auth/me`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      return await getCurrentUser(); // Retry after refresh
     }
 
     if (!res.ok) {
@@ -210,20 +221,17 @@ export async function loginUser(
 
     setTokens({ access: token, refresh: refreshToken });
 
-    if (rememberMe) {
-      localStorage.setItem('triptask_token', token);
-      if (refreshToken) localStorage.setItem('triptask_refresh_token', refreshToken);
-      sessionStorage.removeItem('triptask_token');
-      sessionStorage.removeItem('triptask_refresh_token');
-      console.log('🧠 loginUser: tokens saved to localStorage');
+    localStorage.setItem(TOKEN_KEY, token);
+    if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : 'false');
+
+    if (!rememberMe) {
+      localStorage.setItem(TOKEN_TIMESTAMP_KEY, new Date().toISOString());
     } else {
-      sessionStorage.setItem('triptask_token', token);
-      if (refreshToken) sessionStorage.setItem('triptask_refresh_token', refreshToken);
-      localStorage.removeItem('triptask_token');
-      localStorage.removeItem('triptask_refresh_token');
-      console.log('🧠 loginUser: tokens saved to sessionStorage');
+      localStorage.removeItem(TOKEN_TIMESTAMP_KEY);
     }
 
+    console.log(`🧠 loginUser: Tokens saved (${rememberMe ? 'persistent' : 'temporary 7hr'})`);
     return { user, token, refreshToken };
   } catch (err) {
     console.error('❌ loginUser error:', err);

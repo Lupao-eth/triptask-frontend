@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import { UserProvider } from '@/context/UserContext';
-import { loadTokensFromStorage } from '@/lib/tokenStore'; // 👈 make sure it's imported
+import { loadTokensFromStorage, getAccessToken, logoutUser } from '@/lib/api';
 
 export default function RootLayoutClient({
   children,
@@ -14,16 +14,20 @@ export default function RootLayoutClient({
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      loadTokensFromStorage(); // ✅ load tokens only after we're sure storage is ready
+      loadTokensFromStorage(); // ✅ Also handles 7-hour expiration internally
+      const token = getAccessToken();
+
+      if (!token) {
+        logoutUser(); // ⛔ Expired token — clean up just in case
+      }
+
       setHydrated(true);
     }, 10);
 
     return () => clearTimeout(timeout);
   }, []);
 
-  if (!hydrated) {
-    return null;
-  }
+  if (!hydrated) return null;
 
   return (
     <body className="antialiased bg-white text-black">

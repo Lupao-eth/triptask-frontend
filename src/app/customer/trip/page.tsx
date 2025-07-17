@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '../dashboard/TopBar';
 import SideMenu from '../dashboard/SideMenu';
+import { loadTokensFromStorage } from '@/lib/api'; // ✅ Corrected
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -15,10 +16,11 @@ export default function TripServicePage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('triptask_token');
+      const tokens = loadTokensFromStorage(); // ✅ 7-hour logic
+      const token = tokens?.accessToken;
 
       if (!token) {
-        console.warn('❌ No token in localStorage');
+        console.warn('❌ No valid token found or token expired');
         router.replace('/login');
         return;
       }

@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser, loadTokensFromStorage } from '../lib/api';
+import {
+  getCurrentUser,
+  loadTokensFromStorage,
+  getAccessToken,
+  logoutUser,
+} from '../lib/api';
 
 export default function HomePage() {
   const router = useRouter();
@@ -10,7 +15,14 @@ export default function HomePage() {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      loadTokensFromStorage(); // ✅ Ensure storage is available first
+      loadTokensFromStorage(); // ✅ Load tokens and apply expiry logic
+      const token = getAccessToken();
+
+      if (!token) {
+        console.warn('⏰ Expired or missing token detected, logging out.');
+        logoutUser(); // 💥 Clear expired session
+      }
+
       setHydrated(true);
     }, 10);
 
@@ -32,7 +44,7 @@ export default function HomePage() {
           router.replace('/login');
         }
       } catch (err) {
-        console.error('Auth check failed:', err);
+        console.error('❌ Auth check failed, redirecting to login:', err);
         router.replace('/login');
       }
     }

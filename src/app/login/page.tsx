@@ -48,21 +48,18 @@ export default function LoginPage() {
 
       const { token, refreshToken } = data;
 
-      // ✅ Save token in correct storage based on Remember Me
-      if (rememberMe) {
-        localStorage.setItem('triptask_token', token);
-        localStorage.setItem('triptask_refresh_token', refreshToken || '');
-        sessionStorage.removeItem('triptask_token');
-        sessionStorage.removeItem('triptask_refresh_token');
+      // ✅ Save to localStorage only (no more sessionStorage)
+      localStorage.setItem('triptask_token', token);
+      localStorage.setItem('triptask_refresh_token', refreshToken || '');
+
+      if (!rememberMe) {
+        const expireAt = Date.now() + 7 * 60 * 60 * 1000; // 7 hours
+        localStorage.setItem('triptask_expire_at', expireAt.toString());
       } else {
-        sessionStorage.setItem('triptask_token', token);
-        sessionStorage.setItem('triptask_refresh_token', refreshToken || '');
-        localStorage.removeItem('triptask_token');
-        localStorage.removeItem('triptask_refresh_token');
+        localStorage.removeItem('triptask_expire_at');
       }
 
-      // ✅ Sync in-memory token
-      loadTokensFromStorage(); // reads from both storages
+      loadTokensFromStorage(); // optional
       setTokens({ access: token, refresh: refreshToken });
 
       const freshUser = await getCurrentUser();

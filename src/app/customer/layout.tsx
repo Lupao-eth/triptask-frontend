@@ -25,17 +25,26 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     return () => clearTimeout(timeout);
   }, []);
 
-  // ✅ Load token once on mount
+  // ✅ Load token with 7-hour expiry check
   useEffect(() => {
-    let foundToken: string | null = localStorage.getItem('triptask_token');
-    if (!foundToken || foundToken === 'undefined' || foundToken === 'null') {
-      console.log('🕵️ Trying sessionStorage for token...');
-      foundToken = sessionStorage.getItem('triptask_token');
+    const storedToken = localStorage.getItem('triptask_token');
+    const expireAt = localStorage.getItem('triptask_expire_at');
+
+    const now = Date.now();
+    const isExpired = expireAt && parseInt(expireAt) < now;
+
+    if (isExpired) {
+      console.warn('⚠️ Token expired. Logging out...');
+      localStorage.removeItem('triptask_token');
+      localStorage.removeItem('triptask_refresh_token');
+      localStorage.removeItem('triptask_expire_at');
+      router.replace('/login');
+      return;
     }
 
-    if (foundToken && foundToken !== 'undefined' && foundToken !== 'null') {
-      console.log('🔓 Token loaded:', foundToken);
-      setToken(foundToken);
+    if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+      console.log('🔓 Token loaded:', storedToken);
+      setToken(storedToken);
     } else {
       console.warn('❌ No token found, redirecting to login...');
       router.replace('/login');
@@ -44,24 +53,23 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   // ✅ Validate user when token is set
   useEffect(() => {
-  const validateUser = async () => {
-    if (!token) return;
+    const validateUser = async () => {
+      if (!token) return;
 
-    try {
-      const user = await getCurrentUser();
-      console.log('✅ Authenticated user:', user);
-      setIsLoadingUser(false);
-    } catch (err) {
-      console.error('❌ Invalid token or auth failed:', err);
-      router.replace('/login');
-    }
-  };
+      try {
+        const user = await getCurrentUser();
+        console.log('✅ Authenticated user:', user);
+        setIsLoadingUser(false);
+      } catch (err) {
+        console.error('❌ Invalid token or auth failed:', err);
+        router.replace('/login');
+      }
+    };
 
-  validateUser();
-}, [token, router]);
+    validateUser();
+  }, [token, router]);
 
-
-  // ✅ Handle socket connection and service status
+  // ✅ Handle socket and status
   useEffect(() => {
     if (!token) return;
 
@@ -71,7 +79,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        console.log('🌐 Initial service status:', data.isOnline);
         setServiceOnline(data.isOnline);
         setShowOverlay(true);
         if (data.isOnline) {
@@ -122,7 +129,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      console.log('🔁 Retried service status:', data.isOnline);
       setServiceOnline(data.isOnline);
       setShowOverlay(true);
       if (data.isOnline) {
@@ -183,7 +189,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         </div>
       )}
 
-      {/* Animations */}
+      {/* 🔽 Animations */}
       <style jsx>{`
         .animate-fade-in {
           animation: fadeIn 0.4s ease-out both;
