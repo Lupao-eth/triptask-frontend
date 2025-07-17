@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
-import { getAccessToken } from '@/lib/api';
+import { getAccessToken, refreshAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const slides = [
@@ -25,26 +25,41 @@ export default function HowToUsePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
-
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // ✅ Auth check
   useEffect(() => {
     const checkAuth = async () => {
+      let token = getAccessToken();
+      console.log('[HowToUse] Token fetched:', token);
+
       try {
-        const token = getAccessToken();
-        if (!token) throw new Error('No token');
+        if (!token) {
+          console.warn('[HowToUse] No token, trying refresh...');
+          await refreshAccessToken();
+          token = getAccessToken();
+          if (!token) throw new Error('Still no token after refresh');
+        }
+
         const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-        if (!res.ok) throw new Error('Unauthorized');
+
+        if (!res.ok) {
+          console.warn('[HowToUse] Auth failed:', res.status);
+          throw new Error('Unauthorized');
+        }
+
         const data = await res.json();
+        console.log('[HowToUse] User:', data);
+
         if (data.role !== 'customer') {
           router.push('/not-authorized');
-          return;
         }
-      } catch {
+      } catch (err) {
+        console.error('[HowToUse] Redirecting to login:', err);
         router.push('/login');
       } finally {
         setTimeout(() => setIsLoading(false), 400);
@@ -54,17 +69,8 @@ export default function HowToUsePage() {
     checkAuth();
   }, [router]);
 
-  const goNext = () => {
-    if (slideIndex < slides.length - 1) {
-      setSlideIndex((prev) => prev + 1);
-    }
-  };
-
-  const goBack = () => {
-    if (slideIndex > 0) {
-      setSlideIndex((prev) => prev - 1);
-    }
-  };
+  const goNext = () => slideIndex < slides.length - 1 && setSlideIndex((i) => i + 1);
+  const goBack = () => slideIndex > 0 && setSlideIndex((i) => i - 1);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -91,7 +97,6 @@ export default function HowToUsePage() {
             </div>
           ) : (
             <>
-              {/* Header */}
               <div className="flex items-center gap-3 mb-6">
                 <button
                   onClick={() => router.back()}
@@ -103,12 +108,8 @@ export default function HowToUsePage() {
                 <h1 className="text-3xl font-bold">How to Use?</h1>
               </div>
 
-              {/* Slide Title */}
-              <h2 className="text-center text-xl font-semibold mb-2">
-                {slides[slideIndex].title}
-              </h2>
+              <h2 className="text-center text-xl font-semibold mb-2">{slides[slideIndex].title}</h2>
 
-              {/* Slideshow */}
               <div
                 className="flex flex-col items-center gap-4 transition duration-500"
                 onTouchStart={handleTouchStart}
@@ -141,7 +142,6 @@ export default function HowToUsePage() {
                 </div>
               </div>
 
-              {/* Fullscreen Preview */}
               {previewSrc && (
                 <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex justify-center items-center transition">
                   <button

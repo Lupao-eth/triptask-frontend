@@ -86,7 +86,7 @@ export function logoutUser() {
   }
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+  export async function refreshAccessToken(): Promise<boolean> {
   if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
     console.warn('⚠️ refreshAccessToken: No refresh token available');
     return false;
