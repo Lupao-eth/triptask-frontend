@@ -145,7 +145,7 @@ const BookStatus = () => {
       <div className="p-4 sm:p-6 max-w-4xl mx-auto text-black">
         <div className="flex items-center gap-2 mb-6">
   <button
-    onClick={() => router.push('/customer')}
+    onClick={() => router.push('/customer/dashboard')}
     className="text-yellow-600 hover:text-yellow-800 text-2xl font-bold px-2"
     aria-label="Go back"
   >
