@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
-import { getAccessToken, refreshAccessToken } from '@/lib/api';
+import { getAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const slides = [
@@ -25,52 +25,43 @@ export default function HowToUsePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
+
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // ✅ Auth check — using correct response structure
   useEffect(() => {
     const checkAuth = async () => {
-      let token = getAccessToken();
-      console.log('[HowToUse] Token fetched:', token);
-
       try {
-        if (!token) {
-          console.warn('[HowToUse] No token, trying refresh...');
-          await refreshAccessToken();
-          token = getAccessToken();
-          if (!token) throw new Error('Still no token after refresh');
-        }
-
+        const token = getAccessToken();
+        if (!token) throw new Error('No token stored');
         const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!res.ok) {
-          console.warn('[HowToUse] Auth failed:', res.status);
-          throw new Error('Unauthorized');
-        }
-
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        console.log('[HowToUse] User:', data);
 
-        if (data.role !== 'customer') {
+        // ✅ Correct property path
+        if (!data.user || data.user.role !== 'customer') {
           router.push('/not-authorized');
+          return;
         }
-      } catch (err) {
-        console.error('[HowToUse] Redirecting to login:', err);
+      } catch {
         router.push('/login');
       } finally {
         setTimeout(() => setIsLoading(false), 400);
       }
     };
-
     checkAuth();
   }, [router]);
 
-  const goNext = () => slideIndex < slides.length - 1 && setSlideIndex((i) => i + 1);
-  const goBack = () => slideIndex > 0 && setSlideIndex((i) => i - 1);
+  const goNext = () => {
+    if (slideIndex < slides.length - 1) setSlideIndex(prev => prev + 1);
+  };
+
+  const goBack = () => {
+    if (slideIndex > 0) setSlideIndex(prev => prev - 1);
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -83,7 +74,7 @@ export default function HowToUsePage() {
     if (diff < -50) goBack();
   };
 
-  const toggleZoom = () => setZoomed((z) => !z);
+  const toggleZoom = () => setZoomed(prev => !prev);
 
   return (
     <div className="flex min-h-screen bg-white text-black" style={{ fontFamily: 'var(--font-geist-mono)' }}>
@@ -97,21 +88,22 @@ export default function HowToUsePage() {
             </div>
           ) : (
             <>
+              {/* Header */}
               <div className="flex items-center gap-3 mb-6">
-                <button
-                  onClick={() => router.back()}
-                  className="p-2 rounded-full hover:bg-yellow-200 transition"
-                  aria-label="Go back"
-                >
+                <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-yellow-200 transition" aria-label="Go back">
                   <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-3xl font-bold">How to Use?</h1>
               </div>
 
-              <h2 className="text-center text-xl font-semibold mb-2">{slides[slideIndex].title}</h2>
+              {/* Slide Title */}
+              <h2 className="text-center text-xl font-semibold mb-2">
+                {slides[slideIndex].title}
+              </h2>
 
+              {/* Slideshow */}
               <div
-                className="flex flex-col items-center gap-4 transition duration-500"
+                className="flex flex-col items-center gap-4"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
               >
@@ -122,7 +114,6 @@ export default function HowToUsePage() {
                     onClick={() => setPreviewSrc(slides[slideIndex].src)}
                     className="rounded-lg shadow-lg w-full cursor-pointer transition hover:scale-105"
                   />
-
                   <div className="flex justify-between mt-4">
                     <button
                       onClick={goBack}
@@ -142,26 +133,17 @@ export default function HowToUsePage() {
                 </div>
               </div>
 
+              {/* Preview Modal */}
               {previewSrc && (
-                <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex justify-center items-center transition">
-                  <button
-                    onClick={() => {
-                      setPreviewSrc(null);
-                      setZoomed(false);
-                    }}
-                    className="absolute top-4 right-4 text-white text-3xl"
-                    aria-label="Close preview"
-                  >
+                <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex justify-center items-center">
+                  <button onClick={() => { setPreviewSrc(null); setZoomed(false); }} className="absolute top-4 right-4 text-white text-3xl" aria-label="Close preview">
                     <X size={32} />
                   </button>
                   <img
                     src={previewSrc}
                     alt="Preview"
                     onClick={toggleZoom}
-                    className={`rounded shadow-lg transition-transform duration-300 cursor-zoom-in ${
-                      zoomed ? 'scale-150' : 'scale-100'
-                    } max-w-full max-h-full`}
-                    style={{ objectFit: 'contain' }}
+                    className={`rounded shadow-lg cursor-zoom-in transition-transform duration-300 ${zoomed ? 'scale-150' : 'scale-100'} max-w-full max-h-full`}
                   />
                 </div>
               )}
