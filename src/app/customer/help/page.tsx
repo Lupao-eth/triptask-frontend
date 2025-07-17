@@ -29,6 +29,7 @@ export default function HelpPage() {
   const [tokenValid, setTokenValid] = useState(false);
   const [profileName, setProfileName] = useState('User');
   const [copied, setCopied] = useState(false);
+  const [tawkReady, setTawkReady] = useState(false);
 
   useEffect(() => {
     const validateToken = async () => {
@@ -63,16 +64,33 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
-  // 🧼 Cleanup: hide widget on unmount
-useEffect(() => {
-  return () => {
-    if (typeof window !== 'undefined' && typeof window.Tawk_API?.hide === 'function') {
-      window.Tawk_API.hide();
+  // Hide widget on load and setup onLoad callback
+  useEffect(() => {
+    const hideIfReady = () => {
+      if (typeof window !== 'undefined' && typeof window.Tawk_API?.hide === 'function') {
+        window.Tawk_API.hide();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      if (window.Tawk_API?.onLoad) {
+        window.Tawk_API.onLoad = () => {
+          setTawkReady(true);
+          hideIfReady();
+        };
+      } else {
+        setTawkReady(true);
+        hideIfReady();
+      }
     }
-  };
-}, []);
 
-
+    // Cleanup: hide again on unmount
+    return () => {
+      if (typeof window !== 'undefined' && typeof window.Tawk_API?.hide === 'function') {
+        window.Tawk_API.hide();
+      }
+    };
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(SUPPORT_EMAIL);
@@ -81,9 +99,9 @@ useEffect(() => {
   };
 
   const openTawk = () => {
-    if (typeof window !== 'undefined' && window.Tawk_API?.show) {
-      window.Tawk_API.show();
-      window.Tawk_API.toggle?.();
+    if (typeof window !== 'undefined' && tawkReady) {
+      window.Tawk_API?.show?.();
+      window.Tawk_API?.toggle?.();
     } else {
       console.warn('Tawk_API not ready');
     }

@@ -1,4 +1,3 @@
-// src/types/tawk.d.ts
 export {};
 
 declare global {
