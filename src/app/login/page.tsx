@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { setUser } = useUser(); // ✅ from context
+  const { setUser } = useUser();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +34,6 @@ export default function LoginPage() {
     setMessage('🔐 Logging in...');
 
     try {
-      console.log('🔐 LoginPage: sending login request for', email);
       const res = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,61 +41,45 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      console.log('🔐 LoginPage: login response', data);
-
       if (!res.ok || !data.token) {
         setMessage(`❌ ${data.message || 'Login failed. Try again.'}`);
-        setLoading(false);
         return;
       }
 
-      // Save in-memory tokens
-      setTokens({
-        access: data.token,
-        refresh: data.refreshToken,
-      });
+      const { token, refreshToken } = data;
 
-      // Save to storage
+      setTokens({ access: token, refresh: refreshToken });
+
+      // Persist token based on 'remember me'
       if (rememberMe) {
-        localStorage.setItem('triptask_token', data.token);
-        localStorage.setItem('triptask_refresh_token', data.refreshToken || '');
-        sessionStorage.removeItem('triptask_token');
-        sessionStorage.removeItem('triptask_refresh_token');
-        console.log('🔐 LoginPage: tokens saved to localStorage and sessionStorage cleared');
+        localStorage.setItem('triptask_token', token);
+        localStorage.setItem('triptask_refresh_token', refreshToken || '');
+        sessionStorage.clear();
       } else {
-        sessionStorage.setItem('triptask_token', data.token);
-        sessionStorage.setItem('triptask_refresh_token', data.refreshToken || '');
-        localStorage.removeItem('triptask_token');
-        localStorage.removeItem('triptask_refresh_token');
-        console.log('🔐 LoginPage: tokens saved to sessionStorage and localStorage cleared');
+        sessionStorage.setItem('triptask_token', token);
+        sessionStorage.setItem('triptask_refresh_token', refreshToken || '');
+        localStorage.clear();
       }
 
-      // Load tokens into memory again and fetch user
       loadTokensFromStorage();
       const freshUser = await getCurrentUser();
 
-      if (freshUser) {
-        console.log('✅ LoginPage: loaded user after login →', freshUser);
-        setUser(freshUser); // ✅ set in context
-      } else {
-        console.warn('⚠️ LoginPage: no user found after login');
+      if (!freshUser) {
         setMessage('❌ Login succeeded, but user not found.');
         return;
       }
 
+      setUser(freshUser);
       setMessage('✅ Login successful! Redirecting...');
 
-      // Redirect based on role
-      const role = freshUser.role;
-      if (role === 'rider') {
-        router.push('/rider/dashboard');
-      } else if (role === 'customer') {
-        router.push('/customer/dashboard');
-      } else if (role === 'admin') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/');
-      }
+      const { role } = freshUser;
+      const roleToPath: Record<string, string> = {
+        rider: '/rider/dashboard',
+        customer: '/customer/dashboard',
+        admin: '/admin/dashboard',
+      };
+
+      router.push(roleToPath[role] || '/');
     } catch (err) {
       console.error('❌ LoginPage error:', err);
       setMessage('❌ Something went wrong. Please try again.');
@@ -133,6 +116,7 @@ export default function LoginPage() {
               disabled={loading}
             />
           </div>
+
           <div>
             <label className="block mb-1 font-medium" htmlFor="password">
               Password
@@ -149,6 +133,7 @@ export default function LoginPage() {
               disabled={loading}
             />
           </div>
+
           <div className="flex items-center gap-2">
             <input
               id="remember"
@@ -162,6 +147,7 @@ export default function LoginPage() {
               Remember Me
             </label>
           </div>
+
           <button
             type="submit"
             disabled={loading}
