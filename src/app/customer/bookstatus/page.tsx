@@ -143,7 +143,16 @@ const BookStatus = () => {
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className="p-4 sm:p-6 max-w-4xl mx-auto text-black">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Book Status</h1>
+        <div className="flex items-center gap-2 mb-6">
+  <button
+    onClick={() => router.push('/customer')}
+    className="text-yellow-600 hover:text-yellow-800 text-2xl font-bold px-2"
+    aria-label="Go back"
+  >
+    {'<'}
+  </button>
+  <h1 className="text-2xl sm:text-3xl font-bold">Book Status</h1>
+</div>
 
         {tasks.length === 0 ? (
           <p className="text-center text-gray-500">No active tasks found.</p>
