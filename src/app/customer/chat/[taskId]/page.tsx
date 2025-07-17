@@ -13,7 +13,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import io, { Socket } from 'socket.io-client';
-import { getAccessToken } from '@/lib/tokenStore';
+import { getAccessToken } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 let socket: Socket;

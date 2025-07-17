@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCurrentUser } from '@/lib/api';
 import {
+  getCurrentUser,
+  loadTokensFromStorage,
   setTokens,
-} from '@/lib/tokenStore';
+} from '@/lib/api';
 import { useUser } from '@/context/UserContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
@@ -18,7 +19,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { setUser } = useUser();
+  const { setUser } = useUser(); // ✅ from context
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +34,7 @@ export default function LoginPage() {
     setMessage('🔐 Logging in...');
 
     try {
+      console.log('🔐 LoginPage: sending login request for', email);
       const res = await fetch(`${API_BASE}/auth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -44,52 +46,56 @@ export default function LoginPage() {
 
       if (!res.ok || !data.token) {
         setMessage(`❌ ${data.message || 'Login failed. Try again.'}`);
+        setLoading(false);
         return;
       }
 
-      // ✅ Set tokens in memory
+      // Save in-memory tokens
       setTokens({
         access: data.token,
         refresh: data.refreshToken,
       });
 
-      // ✅ Save to localStorage or sessionStorage
+      // Save to storage
       if (rememberMe) {
         localStorage.setItem('triptask_token', data.token);
         localStorage.setItem('triptask_refresh_token', data.refreshToken || '');
         sessionStorage.removeItem('triptask_token');
         sessionStorage.removeItem('triptask_refresh_token');
+        console.log('🔐 LoginPage: tokens saved to localStorage and sessionStorage cleared');
       } else {
         sessionStorage.setItem('triptask_token', data.token);
         sessionStorage.setItem('triptask_refresh_token', data.refreshToken || '');
         localStorage.removeItem('triptask_token');
         localStorage.removeItem('triptask_refresh_token');
+        console.log('🔐 LoginPage: tokens saved to sessionStorage and localStorage cleared');
       }
 
-
+      // Load tokens into memory again and fetch user
+      loadTokensFromStorage();
       const freshUser = await getCurrentUser();
 
-      if (!freshUser) {
+      if (freshUser) {
+        console.log('✅ LoginPage: loaded user after login →', freshUser);
+        setUser(freshUser); // ✅ set in context
+      } else {
+        console.warn('⚠️ LoginPage: no user found after login');
         setMessage('❌ Login succeeded, but user not found.');
         return;
       }
 
-      setUser(freshUser);
       setMessage('✅ Login successful! Redirecting...');
 
-      // ✅ Redirect based on role
-      switch (freshUser.role) {
-        case 'rider':
-          router.push('/rider/dashboard');
-          break;
-        case 'customer':
-          router.push('/customer/dashboard');
-          break;
-        case 'admin':
-          router.push('/admin/dashboard');
-          break;
-        default:
-          router.push('/');
+      // Redirect based on role
+      const role = freshUser.role;
+      if (role === 'rider') {
+        router.push('/rider/dashboard');
+      } else if (role === 'customer') {
+        router.push('/customer/dashboard');
+      } else if (role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/');
       }
     } catch (err) {
       console.error('❌ LoginPage error:', err);
@@ -160,9 +166,7 @@ export default function LoginPage() {
             type="submit"
             disabled={loading}
             className={`w-full py-2 font-semibold rounded text-white transition ${
-              loading
-                ? 'bg-yellow-300 cursor-not-allowed'
-                : 'bg-yellow-500 hover:bg-yellow-600'
+              loading ? 'bg-yellow-300 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600'
             }`}
           >
             {loading ? 'Logging in...' : 'Log In'}
