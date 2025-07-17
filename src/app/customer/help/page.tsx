@@ -63,6 +63,17 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
+  // 🧼 Cleanup: hide widget on unmount
+useEffect(() => {
+  return () => {
+    if (typeof window !== 'undefined' && typeof window.Tawk_API?.hide === 'function') {
+      window.Tawk_API.hide();
+    }
+  };
+}, []);
+
+
+
   const handleCopy = () => {
     navigator.clipboard.writeText(SUPPORT_EMAIL);
     setCopied(true);

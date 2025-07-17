@@ -5,8 +5,8 @@ declare global {
   interface Window {
     Tawk_API?: {
       toggle?: () => void;
-      hideWidget?: () => void;
-      showWidget?: () => void;
+      show?: () => void;
+      hide?: () => void;
       onLoad?: () => void;
       [key: string]: unknown;
     };
