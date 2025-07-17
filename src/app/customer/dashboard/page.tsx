@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import TopBar from './TopBar';
 import TutorialModal from './TutorialModal';
 import TermsModal from './TermsModal';
+import { getAccessToken } from '@/lib/api'; // ✅ Import token loader
 
 type User = {
   id: string;
@@ -26,8 +27,10 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = localStorage.getItem('triptask_token');
+      const token = getAccessToken(); // ✅ Looks in sessionStorage or localStorage
+
       if (!token) {
+        console.warn('❌ No token found in storage');
         router.push('/login');
         return;
       }
