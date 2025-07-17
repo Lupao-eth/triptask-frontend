@@ -37,33 +37,35 @@ const TaskPage = () => {
 
   useEffect(() => {
     const fetchUser = async () => {
-      try {
-        const savedToken = localStorage.getItem('triptask_token');
-if (!savedToken) throw new Error('No token found in localStorage');
+  try {
+    const savedToken = localStorage.getItem('triptask_token');
+    if (!savedToken) throw new Error('No token found in localStorage');
 
-const res = await fetch(`${API_BASE}/auth/token`, {
-  headers: {
-    Authorization: `Bearer ${savedToken}`,
-  },
-});
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${savedToken}`,
+      },
+    });
 
-        if (!res.ok) throw new Error('Unauthorized');
-        const data = await res.json();
-        const decoded = JSON.parse(atob(data.token.split('.')[1]));
+    if (!res.ok) throw new Error('Unauthorized');
 
-        if (decoded.role !== 'customer') {
-          window.location.href = '/not-authorized';
-          return;
-        }
+    const data = await res.json();
+    const userData = data.user;
 
-        setUser({ id: decoded.id, email: decoded.email, name: decoded.name, role: decoded.role });
-        setToken(data.token);
-      } catch {
-        window.location.href = '/login';
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (userData.role !== 'customer') {
+      window.location.href = '/not-authorized';
+      return;
+    }
+
+    setUser(userData);
+    setToken(savedToken);
+  } catch {
+    window.location.href = '/login';
+  } finally {
+    setLoading(false);
+  }
+};
+
 
     fetchUser();
   }, []);
