@@ -10,14 +10,16 @@ import TawkLoader from '@/components/TawkLoader';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const SUPPORT_EMAIL = 'triptask0514@gmail.com';
 
+// 🧠 Global Tawk_API declaration
 declare global {
   interface Window {
     Tawk_API?: {
-  toggle?: () => void;
-  onLoad?: () => void;
-  [key: string]: unknown;
-};
-
+      toggle?: () => void;
+      showWidget?: () => void;
+      hideWidget?: () => void;
+      onLoad?: () => void;
+      [key: string]: unknown;
+    };
   }
 }
 
@@ -39,9 +41,7 @@ export default function HelpPage() {
 
       try {
         const res = await fetch(`${API_BASE}/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${savedToken}`,
-          },
+          headers: { Authorization: `Bearer ${savedToken}` },
         });
 
         if (!res.ok) throw new Error('Invalid token');
@@ -70,24 +70,24 @@ export default function HelpPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // 🔘 Show widget when Contact Us is clicked
   const openTawk = () => {
-    if (typeof window !== 'undefined' && window.Tawk_API?.toggle) {
-      window.Tawk_API.toggle();
+    if (typeof window !== 'undefined' && window.Tawk_API?.showWidget) {
+      window.Tawk_API.showWidget();
+      window.Tawk_API.toggle?.();
+    } else {
+      console.warn('Tawk_API not ready yet.');
     }
   };
 
   if (!tokenValid) return null;
 
   return (
-    <div
-      className="flex min-h-screen bg-white text-black"
-      style={{ fontFamily: 'var(--font-geist-mono)' }}
-    >
+    <div className="flex min-h-screen bg-white text-black" style={{ fontFamily: 'var(--font-geist-mono)' }}>
       <TawkLoader />
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
         <TopBar name={profileName} />
-
         <main className="flex-1 p-6 pt-24">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
@@ -96,11 +96,7 @@ export default function HelpPage() {
           ) : (
             <>
               <div className="flex items-center gap-3 mb-8">
-                <button
-                  onClick={() => router.back()}
-                  className="p-2 rounded-full hover:bg-yellow-200 transition"
-                  aria-label="Go back"
-                >
+                <button onClick={() => router.back()} className="p-2 rounded-full hover:bg-yellow-200 transition" aria-label="Go back">
                   <ArrowLeft size={20} />
                 </button>
                 <h1 className="text-3xl font-bold">Help</h1>
@@ -111,9 +107,7 @@ export default function HelpPage() {
                   onClick={() => router.push('/customer/help/how-to-use')}
                   className="w-full max-w-md relative flex items-center justify-center px-6 py-4 bg-yellow-300 hover:bg-yellow-400 rounded-lg font-bold shadow transition"
                 >
-                  <span className="absolute left-1/2 transform -translate-x-1/2">
-                    How to use?
-                  </span>
+                  <span className="absolute left-1/2 transform -translate-x-1/2">How to use?</span>
                   <ChevronRight size={20} className="ml-auto" />
                 </button>
 
@@ -121,9 +115,7 @@ export default function HelpPage() {
                   onClick={() => router.push('/customer/help/add-to-home')}
                   className="w-full max-w-md relative flex items-center justify-center px-6 py-4 bg-yellow-300 hover:bg-yellow-400 rounded-lg font-bold shadow transition"
                 >
-                  <span className="absolute left-1/2 transform -translate-x-1/2 text-center">
-                    How to add to home screen
-                  </span>
+                  <span className="absolute left-1/2 transform -translate-x-1/2 text-center">How to add to home screen</span>
                   <ChevronRight size={20} className="ml-auto" />
                 </button>
               </div>
@@ -131,9 +123,7 @@ export default function HelpPage() {
               {/* ✅ Contact Support Section */}
               <div className="mt-16 text-center bg-gray-50 border border-gray-200 rounded-lg p-6 shadow-sm">
                 <h2 className="text-2xl font-bold mb-2">Need Help?</h2>
-                <p className="mb-6 text-gray-600">
-                  If you have any questions, feel free to reach out to our support.
-                </p>
+                <p className="mb-6 text-gray-600">If you have any questions, feel free to reach out to our support.</p>
 
                 <button
                   onClick={openTawk}
@@ -146,15 +136,10 @@ export default function HelpPage() {
                   or email us at:
                   <div className="mt-2 inline-flex items-center bg-white border border-gray-300 px-3 py-2 rounded-md shadow-sm">
                     <span className="mr-2">{SUPPORT_EMAIL}</span>
-                    <button
-                      onClick={handleCopy}
-                      className="text-blue-600 hover:text-blue-800 transition"
-                    >
+                    <button onClick={handleCopy} className="text-blue-600 hover:text-blue-800 transition">
                       <Copy size={16} />
                     </button>
-                    {copied && (
-                      <span className="ml-2 text-green-500 text-xs">Copied!</span>
-                    )}
+                    {copied && <span className="ml-2 text-green-500 text-xs">Copied!</span>}
                   </div>
                 </div>
               </div>

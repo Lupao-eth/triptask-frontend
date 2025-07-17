@@ -1,12 +1,14 @@
-// types/tawk.d.ts
+// src/types/tawk.d.ts
 export {};
 
 declare global {
   interface Window {
     Tawk_API?: {
-      [key: string]: unknown;
       toggle?: () => void;
+      hideWidget?: () => void;
+      showWidget?: () => void;
       onLoad?: () => void;
+      [key: string]: unknown;
     };
   }
 }
