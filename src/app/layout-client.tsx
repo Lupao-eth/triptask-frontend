@@ -6,6 +6,13 @@ import { Toaster } from 'react-hot-toast';
 import { UserProvider } from '@/context/UserContext';
 import { loadTokensFromStorage, getAccessToken, logoutUser } from '@/lib/api';
 
+// Extend the Window interface to add our custom property
+declare global {
+  interface Window {
+    __blobLoggerPatched?: boolean;
+  }
+}
+
 export default function RootLayoutClient({
   children,
 }: {
@@ -14,20 +21,35 @@ export default function RootLayoutClient({
   const [hydrated, setHydrated] = useState(false);
   const pathname = usePathname();
 
+  // 🔍 Global Blob creation logger with full trace
   useEffect(() => {
-    // 🔍 Intercept all blob creations globally
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !window.__blobLoggerPatched) {
+      window.__blobLoggerPatched = true;
+
       const originalCreateObjectURL = URL.createObjectURL;
 
-      URL.createObjectURL = function (blob) {
+      URL.createObjectURL = function (blob: Blob | MediaSource) {
         const url = originalCreateObjectURL.call(URL, blob);
-        console.log('🧨 Blob created:', url);
-        console.trace('👣 Blob created here');
+
+        console.groupCollapsed('🧨 Blob created');
+        console.log('📎 Blob URL:', url);
+
+        // ✅ Type guard to safely access `type` if it's a Blob
+        if (blob instanceof Blob) {
+          console.log('📄 Blob Type:', blob.type || 'unknown');
+        } else {
+          console.log('📄 MediaSource blob (no type)');
+        }
+
+        console.trace('👣 Stack Trace');
+        console.groupEnd();
+
         return url;
       };
     }
   }, []);
 
+  // 🔐 Token check on mount or path change
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (!pathname.startsWith('/login')) {
