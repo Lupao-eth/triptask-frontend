@@ -46,6 +46,7 @@ export default function ChatPage() {
   const [bookingStatus, setBookingStatus] = useState('Loading...');
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewBlobs, setPreviewBlobs] = useState<string[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +55,30 @@ export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
   const taskId = params?.taskId?.toString();
+
+  // ✅ Revoke blob URLs when previewBlobs changes
+  useEffect(() => {
+    return () => {
+      previewBlobs.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewBlobs]);
+
+  // ✅ Revoke all blob URLs on component unmount
+  useEffect(() => {
+    return () => {
+      previewBlobs.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewBlobs]);
+
+  // ✅ Clean up previewUrl when it changes or component unmounts
+useEffect(() => {
+  return () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  };
+}, [previewUrl]);
+
 
   useEffect(() => {
     const token = getAccessToken();
@@ -109,7 +134,7 @@ export default function ChatPage() {
         if (taskRes.ok) {
           const task = await taskRes.json();
           setBookingStatus(task.status);
-          setRiderName(task.name); // assuming `name` is rider's name
+          setRiderName(task.name);
         }
       } catch (error) {
         console.error('❌ Fetch error:', error);
@@ -135,66 +160,76 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // ✅ Updated file change handler with blob preview cleanup
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setSelectedFiles(prev => [...prev, ...files]);
-      scrollToBottom();
-    }
+    const files = e.target.files;
+    if (!files) return;
+
+    // Revoke old blobs
+    previewBlobs.forEach(url => URL.revokeObjectURL(url));
+
+    const newFiles = Array.from(files);
+    const blobUrls = newFiles.map(file => URL.createObjectURL(file));
+
+    setSelectedFiles(prev => [...prev, ...newFiles]);
+    setPreviewBlobs(blobUrls);
+    scrollToBottom();
   };
 
   const sendMessage = async () => {
-  if (sending) return; // prevent multiple sends
-  setSending(true); // start loading
+    if (sending) return;
+    setSending(true);
 
-  const token = getAccessToken();
-  if (!taskId || !user?.name || !token || (!newText.trim() && selectedFiles.length === 0)) {
-    setSending(false);
-    return;
-  }
-
-  const uploadedUrls: FileMeta[] = [];
-
-  for (const file of selectedFiles) {
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await fetch(`${API_BASE}/chats/upload`, {
-        method: 'POST',
-        body: formData,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const result = await res.json();
-      uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
-    } catch (error) {
-      console.error('❌ Upload error:', error);
+    const token = getAccessToken();
+    if (!taskId || !user?.name || !token || (!newText.trim() && selectedFiles.length === 0)) {
+      setSending(false);
+      return;
     }
-  }
 
-  try {
-    await fetch(`${API_BASE}/chats`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        taskId,
-        sender: user.name,
-        text: newText.trim(),
-        fileUrls: uploadedUrls,
-      }),
-    });
+    const uploadedUrls: FileMeta[] = [];
 
-    setNewText('');
-    setSelectedFiles([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  } catch (err) {
-    console.error('❌ Error sending chat:', err);
-  }
+    for (const file of selectedFiles) {
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch(`${API_BASE}/chats/upload`, {
+          method: 'POST',
+          body: formData,
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const result = await res.json();
+        uploadedUrls.push({ url: result.url, type: file.type, name: result.name });
+      } catch (error) {
+        console.error('❌ Upload error:', error);
+      }
+    }
 
-  setSending(false); // end loading
-};
+    try {
+      await fetch(`${API_BASE}/chats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          taskId,
+          sender: user.name,
+          text: newText.trim(),
+          fileUrls: uploadedUrls,
+        }),
+      });
+
+      setNewText('');
+      setSelectedFiles([]);
+      setPreviewBlobs([]); // ✅ Also clear preview URLs
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (err) {
+      console.error('❌ Error sending chat:', err);
+    }
+
+    setSending(false);
+  };
+
 
 
   return (
@@ -227,34 +262,40 @@ export default function ChatPage() {
             <div className="w-6" />
           </div>
 
-          {/* File Previews */}
-          {selectedFiles.length > 0 && (
-            <div className="mt-4 border-t pt-2">
-              <div className="flex flex-wrap gap-2">
-                {selectedFiles.map((file, idx) => (
-                  <div key={idx} className="relative">
-                    {file.type.startsWith('image/') ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 flex items-center justify-center bg-gray-200 rounded text-xs text-center px-1">
-                        {file.name}
-                      </div>
-                    )}
-                    <button
-                      onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                      className="absolute top-0 right-0 bg-black text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
+                       {/* File Previews */}
+{selectedFiles.length > 0 && (
+  <div className="mt-4 border-t pt-2">
+    <div className="flex flex-wrap gap-2">
+      {selectedFiles.map((file, idx) => (
+        <div key={idx} className="relative">
+          {file.type.startsWith('image/') ? (
+            <img
+              src={previewBlobs[idx]}
+              alt={file.name}
+              className="w-20 h-20 object-cover rounded cursor-pointer"
+              onClick={() => setPreviewUrl(previewBlobs[idx])} // Optional: open modal
+            />
+          ) : (
+            <div className="w-20 h-20 flex items-center justify-center bg-gray-200 rounded text-xs text-center px-1">
+              {file.name}
             </div>
           )}
+          <button
+            onClick={() => {
+              URL.revokeObjectURL(previewBlobs[idx]); // ✅ Revoke when removing
+              setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
+              setPreviewBlobs(prev => prev.filter((_, i) => i !== idx));
+            }}
+            className="absolute top-0 right-0 bg-black text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
         </div>
 
         {/* Chat Bubbles */}
@@ -312,21 +353,26 @@ export default function ChatPage() {
         </div>
 
         {/* Full Image Modal */}
-        {previewUrl && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
-            <button
-              onClick={() => setPreviewUrl(null)}
-              className="absolute top-4 right-4 text-white text-2xl font-bold bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70"
-            >
-              &times;
-            </button>
-            <img
-              src={previewUrl}
-              alt="Full Preview"
-              className="max-w-full max-h-full object-contain"
-            />
-          </div>
-        )}
+{previewUrl && (
+  <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
+    <button
+      onClick={() => {
+        URL.revokeObjectURL(previewUrl); // ✅ Revoke blob URL when closing
+        setPreviewUrl(null);
+      }}
+      className="absolute top-4 right-4 text-white text-2xl font-bold bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-70"
+    >
+      &times;
+    </button>
+    <img
+      src={previewUrl}
+      alt="Full Preview"
+      className="max-w-full max-h-full object-contain"
+    />
+  </div>
+)}
+
+
 
         {/* Scroll to Bottom Button */}
         {showScrollButton && (
