@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Home,
   CalendarCheck,
@@ -10,6 +10,7 @@ import {
   MapPin,
   ClipboardList,
   HelpCircle,
+  Loader2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -22,6 +23,7 @@ type SideMenuProps = {
 
 const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
   const router = useRouter();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -31,7 +33,10 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  const goTo = (path: string) => {
+  const goTo = (path: string, showLoading = false) => {
+    if (showLoading) {
+      setIsNavigating(true);
+    }
     router.push(path);
     onClose();
   };
@@ -54,6 +59,15 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
 
   return (
     <>
+      {/* Loading Screen */}
+      {isNavigating && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center font-mono">
+          <Loader2 className="w-10 h-10 animate-spin text-yellow-500 mb-4" />
+          <p className="text-gray-700 text-lg animate-pulse">Loading page...</p>
+        </div>
+      )}
+
+      {/* Overlay */}
       {isOpen && (
         <div
           onClick={onClose}
@@ -65,6 +79,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
         />
       )}
 
+      {/* Side Menu */}
       <aside
         className={`fixed top-0 left-0 h-full w-64 bg-yellow-400 text-black shadow-xl transform ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -91,7 +106,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
           </div>
 
           <button
-            onClick={() => goTo('/customer/trip')}
+            onClick={() => goTo('/customer/trip', true)} // show loading
             className="flex items-center gap-3 pl-12 pr-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <MapPin size={20} /> Trip
@@ -126,7 +141,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
           </button>
 
           <button
-            onClick={() => goTo('/customer/help')}
+            onClick={() => goTo('/customer/help', true)} // show loading
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <HelpCircle size={20} /> Help
