@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import TopBar from '../dashboard/TopBar';
 import SideMenu from '../dashboard/SideMenu';
 
@@ -30,6 +31,7 @@ const BookHistory = () => {
   const [loading, setLoading] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeTab, setActiveTab] = useState<'completed' | 'cancelled'>('completed');
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,45 +71,48 @@ const BookHistory = () => {
   const filteredTasks = tasks.filter((task) => task.status === activeTab);
 
   return (
-    <main className="min-h-screen bg-gray-50 pt-16 font-mono">
+    <main className="min-h-screen bg-gray-50 pt-16 font-mono text-black">
       <TopBar name={user?.name || 'Customer'} />
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <button
-        className="fixed top-4 left-4 z-50 text-2xl text-black"
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
-        &#9776;
-      </button>
+      {/* Title + Back Button */}
+      <div className="relative flex items-center justify-center mb-6 px-4 sm:px-6 max-w-4xl mx-auto">
+        <button
+          onClick={() => router.push('/customer/dashboard')}
+          className="absolute left-0 text-black hover:text-yellow-800 text-2xl font-bold px-2"
+          aria-label="Go back"
+        >
+          {'<'}
+        </button>
+        <h1 className="text-2xl sm:text-3xl font-bold text-center">Booking History</h1>
+      </div>
 
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto text-black">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Booking History</h1>
+      {/* Tabs */}
+      <div className="flex justify-center mb-6">
+        <button
+          onClick={() => setActiveTab('completed')}
+          className={`px-4 py-2 rounded-l-md ${
+            activeTab === 'completed'
+              ? 'bg-yellow-500 text-white'
+              : 'bg-gray-200 text-gray-800'
+          }`}
+        >
+          Completed
+        </button>
+        <button
+          onClick={() => setActiveTab('cancelled')}
+          className={`px-4 py-2 rounded-r-md ${
+            activeTab === 'cancelled'
+              ? 'bg-yellow-500 text-white'
+              : 'bg-gray-200 text-gray-800'
+          }`}
+        >
+          Cancelled
+        </button>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex justify-center mb-6">
-          <button
-            onClick={() => setActiveTab('completed')}
-            className={`px-4 py-2 rounded-l-md ${
-              activeTab === 'completed'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-gray-200 text-gray-800'
-            }`}
-          >
-            Completed
-          </button>
-          <button
-            onClick={() => setActiveTab('cancelled')}
-            className={`px-4 py-2 rounded-r-md ${
-              activeTab === 'cancelled'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-gray-200 text-gray-800'
-            }`}
-          >
-            Cancelled
-          </button>
-        </div>
-
-        {/* Content */}
+      {/* Content */}
+      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
         {loading ? (
           <div className="text-center text-gray-500">🔄 Loading...</div>
         ) : filteredTasks.length === 0 ? (
