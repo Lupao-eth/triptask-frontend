@@ -24,34 +24,36 @@ interface ErrorResponse {
   message: string;
 }
 
-// ✅ Set tokens in memory
 export function setTokens(tokens: { access: string; refresh?: string | null }) {
+  if (!tokens.access || tokens.access === 'undefined' || tokens.access === 'null') {
+    console.warn('🚫 setTokens: Invalid access token');
+    accessToken = null;
+    refreshToken = null;
+    return;
+  }
+
   accessToken = tokens.access;
   refreshToken = tokens.refresh ?? null;
   console.log('🔐 setTokens:', { accessToken, refreshToken });
 }
 
-// ✅ Load tokens from localStorage or sessionStorage
 export function loadTokensFromStorage() {
   try {
     let storedToken = localStorage.getItem('triptask_token');
     let storedRefresh = localStorage.getItem('triptask_refresh_token');
+    let storageType = 'localStorage';
 
     if (!storedToken || storedToken === 'undefined' || storedToken === 'null' || storedToken.trim() === '') {
-      console.log('📦 loadTokensFromStorage: No tokens in localStorage, trying sessionStorage...');
       storedToken = sessionStorage.getItem('triptask_token');
       storedRefresh = sessionStorage.getItem('triptask_refresh_token');
+      storageType = 'sessionStorage';
     }
 
-    console.log('📦 loadTokensFromStorage:', {
-      storedToken,
-      storedRefresh,
-    });
-
     if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+      console.log(`📦 loadTokensFromStorage: Found tokens in ${storageType}`);
       setTokens({ access: storedToken, refresh: storedRefresh ?? null });
     } else {
-      console.log('📦 loadTokensFromStorage: No valid tokens found, clearing tokens');
+      console.log('📦 loadTokensFromStorage: No valid tokens, clearing memory');
       accessToken = null;
       refreshToken = null;
     }
@@ -62,7 +64,6 @@ export function loadTokensFromStorage() {
   }
 }
 
-// ✅ Accessors
 export function getAccessToken(): string | null {
   console.log('🔑 getAccessToken:', accessToken);
   return accessToken;
@@ -73,7 +74,6 @@ export function getRefreshToken(): string | null {
   return refreshToken;
 }
 
-// ✅ Logout
 export function logoutUser() {
   accessToken = null;
   refreshToken = null;
@@ -83,13 +83,12 @@ export function logoutUser() {
     localStorage.removeItem('triptask_refresh_token');
     sessionStorage.removeItem('triptask_token');
     sessionStorage.removeItem('triptask_refresh_token');
-    console.log('🚪 logoutUser: tokens cleared from localStorage and sessionStorage');
+    console.log('🚪 logoutUser: tokens cleared from both storages');
   } catch (err) {
     console.warn('⚠️ logoutUser storage removal failed:', err);
   }
 }
 
-// ✅ Refresh token
 async function refreshAccessToken(): Promise<boolean> {
   if (!refreshToken || refreshToken === 'undefined' || refreshToken === 'null') {
     console.warn('⚠️ refreshAccessToken: no refreshToken available');
@@ -105,25 +104,27 @@ async function refreshAccessToken(): Promise<boolean> {
     });
 
     if (!res.ok) {
-      console.warn(`⚠️ refreshAccessToken failed with status ${res.status}`);
+      console.warn(`⚠️ refreshAccessToken failed: ${res.status}`);
       logoutUser();
       return false;
     }
 
-    const data: { token: string } = await res.json();
+    const data: { token: string; refreshToken?: string } = await res.json();
     console.log('🔄 refreshAccessToken response:', data);
 
     if (data.token && data.token !== 'undefined') {
       accessToken = data.token;
 
-      try {
-        localStorage.setItem('triptask_token', data.token);
-        sessionStorage.setItem('triptask_token', data.token);
-        console.log('🔄 refreshAccessToken: token saved to storage');
-      } catch (err) {
-        console.warn('⚠️ refreshAccessToken storage set failed:', err);
+      const isInLocal = !!localStorage.getItem('triptask_refresh_token');
+      const storage = isInLocal ? localStorage : sessionStorage;
+
+      storage.setItem('triptask_token', data.token);
+      if (data.refreshToken) {
+        storage.setItem('triptask_refresh_token', data.refreshToken);
+        refreshToken = data.refreshToken;
       }
 
+      console.log(`🔄 refreshAccessToken: tokens updated in ${isInLocal ? 'localStorage' : 'sessionStorage'}`);
       return true;
     }
   } catch (err) {
@@ -134,37 +135,32 @@ async function refreshAccessToken(): Promise<boolean> {
   return false;
 }
 
-// ✅ Get user info from token
 export async function getCurrentUser(): Promise<AuthUser | null> {
   let token = getAccessToken();
-
   if (!token) {
     console.warn('⚠️ getCurrentUser: No access token available');
     return null;
   }
 
   try {
-    console.log('🔍 getCurrentUser: using access token →', token);
+    console.log('🔍 getCurrentUser: using token', token);
     let res = await fetch(`${API_BASE}/auth/me`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${token}` },
     });
 
     if (res.status === 401) {
-      console.warn('⚠️ getCurrentUser: 401 Unauthorized, trying refresh...');
+      console.warn('⚠️ 401 Unauthorized. Trying refresh...');
       const refreshed = await refreshAccessToken();
-      if (refreshed) {
-        token = getAccessToken();
-        if (!token) return null;
+      if (!refreshed) return null;
 
-        res = await fetch(`${API_BASE}/auth/me`, {
-          method: 'GET',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        console.warn('⚠️ getCurrentUser: refresh failed');
-        return null;
-      }
+      token = getAccessToken();
+      if (!token) return null;
+
+      res = await fetch(`${API_BASE}/auth/me`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
     }
 
     if (!res.ok) {
@@ -173,7 +169,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     }
 
     const data: MeResponse = await res.json();
-    console.log('✅ getCurrentUser: user =', data.user);
+    console.log('✅ getCurrentUser:', data.user);
     return data.user || null;
   } catch (err) {
     console.error('❌ getCurrentUser error:', err);
@@ -181,14 +177,13 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
-// ✅ Login
 export async function loginUser(
   email: string,
   password: string,
   rememberMe = false
 ): Promise<{ user: AuthUser; token: string; refreshToken?: string }> {
   try {
-    console.log('🔐 loginUser: sending login for', email);
+    console.log('🔐 loginUser: logging in', email);
     const res = await fetch(`${API_BASE}/auth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -196,17 +191,15 @@ export async function loginUser(
     });
 
     const data = await res.json();
-    console.log('🔐 loginUser response:', data);
-
     if (!res.ok) {
-      const errorMessage = typeof data === 'object' && 'message' in data
-        ? (data as ErrorResponse).message
-        : 'Login failed';
+      const errorMessage =
+        typeof data === 'object' && 'message' in data
+          ? (data as ErrorResponse).message
+          : 'Login failed';
       throw new Error(errorMessage);
     }
 
     const { token, refreshToken, user } = data as LoginResponse;
-
     if (!token || !user || token === 'undefined') {
       throw new Error('Missing token or user in login response');
     }
@@ -218,13 +211,13 @@ export async function loginUser(
       if (refreshToken) localStorage.setItem('triptask_refresh_token', refreshToken);
       sessionStorage.removeItem('triptask_token');
       sessionStorage.removeItem('triptask_refresh_token');
-      console.log('🔐 loginUser: tokens saved to localStorage');
+      console.log('🧠 loginUser: tokens saved to localStorage');
     } else {
       sessionStorage.setItem('triptask_token', token);
       if (refreshToken) sessionStorage.setItem('triptask_refresh_token', refreshToken);
       localStorage.removeItem('triptask_token');
       localStorage.removeItem('triptask_refresh_token');
-      console.log('🔐 loginUser: tokens saved to sessionStorage');
+      console.log('🧠 loginUser: tokens saved to sessionStorage');
     }
 
     return { user, token, refreshToken };

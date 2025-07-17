@@ -48,20 +48,23 @@ export default function LoginPage() {
 
       const { token, refreshToken } = data;
 
-      setTokens({ access: token, refresh: refreshToken });
-
       // Persist token based on 'remember me'
       if (rememberMe) {
         localStorage.setItem('triptask_token', token);
         localStorage.setItem('triptask_refresh_token', refreshToken || '');
-        sessionStorage.clear();
+        sessionStorage.removeItem('triptask_token');
+        sessionStorage.removeItem('triptask_refresh_token');
       } else {
         sessionStorage.setItem('triptask_token', token);
         sessionStorage.setItem('triptask_refresh_token', refreshToken || '');
-        localStorage.clear();
+        localStorage.removeItem('triptask_token');
+        localStorage.removeItem('triptask_refresh_token');
       }
 
-      loadTokensFromStorage();
+      // Load and apply token from wherever it was saved
+      loadTokensFromStorage(); // 🟡 This reads from both storage types
+      setTokens({ access: token, refresh: refreshToken }); // 🔐 Set in-memory tokens
+
       const freshUser = await getCurrentUser();
 
       if (!freshUser) {
