@@ -48,7 +48,7 @@ export default function LoginPage() {
 
       const { token, refreshToken } = data;
 
-      // Persist token based on 'remember me'
+      // ✅ Save token in correct storage based on Remember Me
       if (rememberMe) {
         localStorage.setItem('triptask_token', token);
         localStorage.setItem('triptask_refresh_token', refreshToken || '');
@@ -61,9 +61,9 @@ export default function LoginPage() {
         localStorage.removeItem('triptask_refresh_token');
       }
 
-      // Load and apply token from wherever it was saved
-      loadTokensFromStorage(); // 🟡 This reads from both storage types
-      setTokens({ access: token, refresh: refreshToken }); // 🔐 Set in-memory tokens
+      // ✅ Sync in-memory token
+      loadTokensFromStorage(); // reads from both storages
+      setTokens({ access: token, refresh: refreshToken });
 
       const freshUser = await getCurrentUser();
 

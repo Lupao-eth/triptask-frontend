@@ -3,7 +3,7 @@
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000'; // Update as needed
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:4000';
 
 /**
  * Set both access and refresh tokens in memory
@@ -31,12 +31,17 @@ export const getRefreshToken = (): string | null => {
 };
 
 /**
- * Clear both tokens from memory (used on logout)
+ * Clear both tokens from memory and storage (optional)
  */
 export const clearTokens = () => {
   accessToken = null;
   refreshToken = null;
   console.log('🚪 clearTokens called, tokens cleared');
+
+  localStorage.removeItem('triptask_token');
+  localStorage.removeItem('triptask_refresh_token');
+  sessionStorage.removeItem('triptask_token');
+  sessionStorage.removeItem('triptask_refresh_token');
 };
 
 /**
@@ -48,31 +53,31 @@ export const loadTokensFromStorage = () => {
     let storedRefresh = localStorage.getItem('triptask_refresh_token');
 
     if (!storedToken || storedToken === 'undefined') {
-      console.log('📦 loadTokensFromStorage: No token in localStorage, checking sessionStorage...');
+      console.log('📦 No token in localStorage, trying sessionStorage...');
       storedToken = sessionStorage.getItem('triptask_token');
       storedRefresh = sessionStorage.getItem('triptask_refresh_token');
     } else {
-      console.log('📦 loadTokensFromStorage: Token found in localStorage.');
+      console.log('📦 Tokens found in localStorage.');
     }
 
     if (storedToken && storedToken !== 'undefined') {
       setTokens({ access: storedToken, refresh: storedRefresh ?? undefined });
-      console.log('📦 loadTokensFromStorage: Tokens loaded into memory.');
-    } else if (storedRefresh) {
-      console.log('📦 No access token but refresh token exists. Attempting refresh...');
+      console.log('📦 Tokens loaded into memory.');
+    } else if (storedRefresh && storedRefresh !== 'undefined') {
+      console.log('📦 No access token, but refresh token exists. Attempting refresh...');
       attemptTokenRefresh(storedRefresh);
     } else {
-      console.log('📦 loadTokensFromStorage: No valid tokens found, clearing memory.');
+      console.log('📦 No valid tokens found, clearing...');
       clearTokens();
     }
   } catch (error) {
-    console.warn('⚠️ loadTokensFromStorage: Error reading tokens from storage:', error);
+    console.warn('⚠️ Error loading tokens:', error);
     clearTokens();
   }
 };
 
 /**
- * Attempt to refresh tokens using refresh token
+ * Attempt to refresh access token using refresh token.
  */
 const attemptTokenRefresh = async (refresh: string) => {
   try {
@@ -87,18 +92,16 @@ const attemptTokenRefresh = async (refresh: string) => {
     if (!res.ok) throw new Error('Refresh failed');
 
     const data = await res.json();
-    console.log('🔄 Token refreshed:', data);
+    console.log('🔄 Token refreshed successfully:', data);
 
     setTokens({ access: data.accessToken, refresh: data.refreshToken });
 
-    // Update the correct storage (depends where refresh was found)
-    const inLocal = !!localStorage.getItem('triptask_refresh_token');
-
-    const storage = inLocal ? localStorage : sessionStorage;
+    // Decide storage based on where the refresh token was found
+    const useLocal = !!localStorage.getItem('triptask_refresh_token');
+    const storage = useLocal ? localStorage : sessionStorage;
 
     storage.setItem('triptask_token', data.accessToken);
     storage.setItem('triptask_refresh_token', data.refreshToken);
-
   } catch (err) {
     console.error('❌ Token refresh failed:', err);
     clearTokens();

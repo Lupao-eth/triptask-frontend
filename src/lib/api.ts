@@ -37,7 +37,7 @@ export function setTokens(tokens: { access: string; refresh?: string | null }) {
   console.log('🔐 setTokens:', { accessToken, refreshToken });
 }
 
-export function loadTokensFromStorage() {
+export function loadTokensFromStorage(): { token: string | null; refresh: string | null } {
   try {
     let storedToken = localStorage.getItem('triptask_token');
     let storedRefresh = localStorage.getItem('triptask_refresh_token');
@@ -52,17 +52,21 @@ export function loadTokensFromStorage() {
     if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
       console.log(`📦 loadTokensFromStorage: Found tokens in ${storageType}`);
       setTokens({ access: storedToken, refresh: storedRefresh ?? null });
+      return { token: storedToken, refresh: storedRefresh ?? null };
     } else {
       console.log('📦 loadTokensFromStorage: No valid tokens, clearing memory');
       accessToken = null;
       refreshToken = null;
+      return { token: null, refresh: null };
     }
   } catch (err) {
     console.warn('⚠️ loadTokensFromStorage failed:', err);
     accessToken = null;
     refreshToken = null;
+    return { token: null, refresh: null };
   }
 }
+
 
 export function getAccessToken(): string | null {
   console.log('🔑 getAccessToken:', accessToken);
