@@ -5,10 +5,6 @@ let refreshToken: string | null = null;
 
 const TOKEN_KEY = 'triptask_token';
 const REFRESH_TOKEN_KEY = 'triptask_refresh_token';
-const REMEMBER_ME_KEY = 'triptask_remember';
-const TOKEN_TIMESTAMP_KEY = 'triptask_token_created';
-
-const TOKEN_EXPIRATION_HOURS = 7;
 
 export interface AuthUser {
   id: string;
@@ -31,19 +27,6 @@ interface ErrorResponse {
   message: string;
 }
 
-function isTokenExpired(): boolean {
-  const remember = localStorage.getItem(REMEMBER_ME_KEY);
-  if (remember === 'true') return false;
-
-  const createdAt = localStorage.getItem(TOKEN_TIMESTAMP_KEY);
-  if (!createdAt) return true;
-
-  const createdTime = new Date(createdAt).getTime();
-  const now = Date.now();
-  const diffHours = (now - createdTime) / (1000 * 60 * 60);
-  return diffHours > TOKEN_EXPIRATION_HOURS;
-}
-
 export function setTokens(tokens: { access: string; refresh?: string | null }) {
   if (!tokens.access || tokens.access === 'undefined' || tokens.access === 'null') {
     console.warn('🚫 setTokens: Invalid access token');
@@ -57,14 +40,13 @@ export function setTokens(tokens: { access: string; refresh?: string | null }) {
   console.log('🔐 setTokens:', { accessToken, refreshToken });
 }
 
-// ✅ Fixed return type to match returned keys
 export function loadTokensFromStorage(): { accessToken: string | null; refreshToken: string | null } {
   try {
     const token = localStorage.getItem(TOKEN_KEY);
     const refresh = localStorage.getItem(REFRESH_TOKEN_KEY);
 
-    if (!token || token === 'undefined' || token === 'null' || isTokenExpired()) {
-      console.log('📦 loadTokensFromStorage: No valid token or token expired');
+    if (!token || token === 'undefined' || token === 'null') {
+      console.log('📦 loadTokensFromStorage: No valid token');
       accessToken = null;
       refreshToken = null;
       logoutUser();
@@ -98,9 +80,7 @@ export function logoutUser() {
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(REMEMBER_ME_KEY);
-    localStorage.removeItem(TOKEN_TIMESTAMP_KEY);
-    console.log('🚪 logoutUser: tokens and flags cleared');
+    console.log('🚪 logoutUser: tokens cleared');
   } catch (err) {
     console.warn('⚠️ logoutUser error:', err);
   }
@@ -134,11 +114,6 @@ async function refreshAccessToken(): Promise<boolean> {
       if (data.refreshToken) {
         localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
         refreshToken = data.refreshToken;
-      }
-
-      const remember = localStorage.getItem(REMEMBER_ME_KEY);
-      if (remember !== 'true') {
-        localStorage.setItem(TOKEN_TIMESTAMP_KEY, new Date().toISOString());
       }
 
       console.log('🔄 refreshAccessToken: Tokens updated');
@@ -194,8 +169,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
 export async function loginUser(
   email: string,
-  password: string,
-  rememberMe = false
+  password: string
 ): Promise<{ user: AuthUser; token: string; refreshToken?: string }> {
   try {
     console.log('🔐 loginUser: logging in', email);
@@ -223,15 +197,8 @@ export async function loginUser(
 
     localStorage.setItem(TOKEN_KEY, token);
     if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-    localStorage.setItem(REMEMBER_ME_KEY, rememberMe ? 'true' : 'false');
 
-    if (!rememberMe) {
-      localStorage.setItem(TOKEN_TIMESTAMP_KEY, new Date().toISOString());
-    } else {
-      localStorage.removeItem(TOKEN_TIMESTAMP_KEY);
-    }
-
-    console.log(`🧠 loginUser: Tokens saved (${rememberMe ? 'persistent' : 'temporary 7hr'})`);
+    console.log('🧠 loginUser: Tokens saved (persistent)');
     return { user, token, refreshToken };
   } catch (err) {
     console.error('❌ loginUser error:', err);

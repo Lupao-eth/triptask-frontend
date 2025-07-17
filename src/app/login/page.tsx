@@ -11,7 +11,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -44,21 +43,16 @@ export default function LoginPage() {
 
       const { token, refreshToken } = data;
 
+      // Always store tokens persistently
       localStorage.setItem('triptask_token', token);
       localStorage.setItem('triptask_refresh_token', refreshToken || '');
-
-      if (!rememberMe) {
-        const expireAt = Date.now() + 7 * 60 * 60 * 1000; // 7 hours
-        localStorage.setItem('triptask_expire_at', expireAt.toString());
-      } else {
-        localStorage.removeItem('triptask_expire_at');
-      }
+      localStorage.removeItem('triptask_expire_at'); // Clear any old expiration key if present
 
       setTokens({ access: token, refresh: refreshToken });
 
       const freshUser = await getCurrentUser();
       if (!freshUser) {
-        setMessage('❌ Login succeeded, but user not founds.');
+        setMessage('❌ Login succeeded, but user not found.');
         return;
       }
 
@@ -124,20 +118,6 @@ export default function LoginPage() {
               autoComplete="current-password"
               disabled={loading}
             />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              id="remember"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 text-yellow-500 border-yellow-300 rounded focus:ring-yellow-400"
-              disabled={loading}
-            />
-            <label htmlFor="remember" className="text-sm select-none">
-              Remember Me
-            </label>
           </div>
 
           <button
