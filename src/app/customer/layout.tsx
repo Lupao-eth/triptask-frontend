@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
+import { getCurrentUser } from '@/lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 let socket: Socket;
@@ -13,49 +14,65 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const [loadingRetry, setLoadingRetry] = useState(false);
   const [loadingBack, setLoadingBack] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const router = useRouter();
   const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-  let storedToken = localStorage.getItem('triptask_token');
-  if (!storedToken || storedToken === 'undefined' || storedToken === 'null') {
-    console.log('🕵️ Trying sessionStorage for token...');
-    storedToken = sessionStorage.getItem('triptask_token');
-  }
-
-  if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-    console.log('🔓 Token loaded in layout.tsx:', storedToken);
-    setToken(storedToken);
-  } else {
-    console.warn('❌ No valid token found in storage');
-    setToken(null);
-  }
-}, []);
-
-
-  const fetchInitialStatus = async (authToken: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/service-status`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      const data = await res.json();
-      console.log('🌐 Initial service status:', data.isOnline);
-      setServiceOnline(data.isOnline);
-      setShowOverlay(true);
-      if (data.isOnline) {
-        overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 2000);
+    async function validateUser() {
+      let storedToken = localStorage.getItem('triptask_token');
+      if (!storedToken || storedToken === 'undefined' || storedToken === 'null') {
+        console.log('🕵️ Trying sessionStorage for token...');
+        storedToken = sessionStorage.getItem('triptask_token');
       }
-    } catch (err) {
-      console.error('❌ Failed to fetch initial status:', err);
-      setServiceOnline(false);
-      setShowOverlay(true);
+
+      if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+        console.log('🔓 Token loaded in layout.tsx:', storedToken);
+        setToken(storedToken);
+
+        try {
+          const user = await getCurrentUser();
+          console.log('✅ Authenticated user in layout:', user);
+        } catch (err) {
+          console.error('❌ Invalid token or auth failed:', err);
+          router.replace('/login');
+          return;
+        }
+      } else {
+        console.warn('❌ No valid token found, redirecting to login');
+        router.replace('/login');
+        return;
+      }
+
+      setIsLoadingUser(false);
     }
-  };
+
+    validateUser();
+  }, [router]);
 
   useEffect(() => {
     if (!token) return;
+
+    const fetchInitialStatus = async (authToken: string) => {
+      try {
+        const res = await fetch(`${API_BASE}/service-status`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+        const data = await res.json();
+        console.log('🌐 Initial service status:', data.isOnline);
+        setServiceOnline(data.isOnline);
+        setShowOverlay(true);
+        if (data.isOnline) {
+          overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 2000);
+        }
+      } catch (err) {
+        console.error('❌ Failed to fetch initial status:', err);
+        setServiceOnline(false);
+        setShowOverlay(true);
+      }
+    };
 
     fetchInitialStatus(token);
 
@@ -87,21 +104,36 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     };
   }, [token]);
 
-  const handleRetry = async () => {
+  const handleRetryClick = async () => {
     if (!token) return;
     setLoadingRetry(true);
     try {
-      await fetchInitialStatus(token);
+      const res = await fetch(`${API_BASE}/service-status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      console.log('🔁 Retried service status:', data.isOnline);
+      setServiceOnline(data.isOnline);
+      setShowOverlay(true);
+      if (data.isOnline) {
+        overlayTimeoutRef.current = setTimeout(() => setShowOverlay(false), 2000);
+      }
       if (socket?.disconnected) socket.connect();
+    } catch (err) {
+      console.error('❌ Retry failed:', err);
     } finally {
       setTimeout(() => setLoadingRetry(false), 1000);
     }
   };
 
-  const handleBackToLogin = () => {
+  const handleBackToLoginClick = () => {
     setLoadingBack(true);
     setTimeout(() => router.push('/login'), 800);
   };
+
+  if (isLoadingUser) {
+    return <div className="p-4 text-center text-gray-500 font-mono">Authenticating...</div>;
+  }
 
   return (
     <div>
@@ -122,14 +154,14 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <button
-                  onClick={handleRetry}
+                  onClick={handleRetryClick}
                   disabled={loadingRetry}
                   className="px-5 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {loadingRetry ? 'Retrying...' : 'Retry'}
                 </button>
                 <button
-                  onClick={handleBackToLogin}
+                  onClick={handleBackToLoginClick}
                   disabled={loadingBack}
                   className="px-5 py-2 rounded bg-gray-400 text-white hover:bg-gray-500 transition disabled:opacity-50"
                 >
