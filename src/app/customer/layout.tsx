@@ -16,16 +16,22 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ Get token from localStorage instead of cookies
   useEffect(() => {
-    const savedToken = localStorage.getItem('triptask_token');
-    if (!savedToken) {
-      console.warn('❌ No token found in localStorage');
-      setToken(null);
-    } else {
-      setToken(savedToken);
-    }
-  }, []);
+  let storedToken = localStorage.getItem('triptask_token');
+  if (!storedToken || storedToken === 'undefined' || storedToken === 'null') {
+    console.log('🕵️ Trying sessionStorage for token...');
+    storedToken = sessionStorage.getItem('triptask_token');
+  }
+
+  if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
+    console.log('🔓 Token loaded in layout.tsx:', storedToken);
+    setToken(storedToken);
+  } else {
+    console.warn('❌ No valid token found in storage');
+    setToken(null);
+  }
+}, []);
+
 
   const fetchInitialStatus = async (authToken: string) => {
     try {
