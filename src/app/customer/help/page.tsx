@@ -44,15 +44,15 @@ export default function HelpPage() {
     validateToken();
   }, [router]);
 
-  // Simulated loading
+  // ✅ Loading after authentication
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 400);
-    return () => clearTimeout(timer);
-  }, []);
+    if (tokenValid) {
+      const timer = setTimeout(() => setIsLoading(false), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [tokenValid]);
 
-  if (!tokenValid) {
-    return null; // Prevent render
-  }
+  if (!tokenValid) return null;
 
   return (
     <div
@@ -62,6 +62,7 @@ export default function HelpPage() {
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
         <TopBar name={profileName} />
+
         <main className="flex-1 p-6 pt-24">
           {isLoading ? (
             <div className="flex justify-center items-center h-full">
