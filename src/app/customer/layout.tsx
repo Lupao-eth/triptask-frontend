@@ -9,6 +9,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 let socket: Socket;
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
+  const [hydrated, setHydrated] = useState(false);
   const [serviceOnline, setServiceOnline] = useState<boolean | null>(null);
   const [showOverlay, setShowOverlay] = useState(true);
   const [loadingRetry, setLoadingRetry] = useState(false);
@@ -18,47 +19,55 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   const router = useRouter();
   const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // ✅ Hydration guard
   useEffect(() => {
-    async function validateUser() {
-      let storedToken = localStorage.getItem('triptask_token');
-      if (!storedToken || storedToken === 'undefined' || storedToken === 'null') {
-        console.log('🕵️ Trying sessionStorage for token...');
-        storedToken = sessionStorage.getItem('triptask_token');
-      }
+    const timeout = setTimeout(() => setHydrated(true), 10);
+    return () => clearTimeout(timeout);
+  }, []);
 
-      if (storedToken && storedToken !== 'undefined' && storedToken !== 'null') {
-        console.log('🔓 Token loaded in layout.tsx:', storedToken);
-        setToken(storedToken);
-
-        try {
-          const user = await getCurrentUser();
-          console.log('✅ Authenticated user in layout:', user);
-        } catch (err) {
-          console.error('❌ Invalid token or auth failed:', err);
-          router.replace('/login');
-          return;
-        }
-      } else {
-        console.warn('❌ No valid token found, redirecting to login');
-        router.replace('/login');
-        return;
-      }
-
-      setIsLoadingUser(false);
+  // ✅ Load token once on mount
+  useEffect(() => {
+    let foundToken: string | null = localStorage.getItem('triptask_token');
+    if (!foundToken || foundToken === 'undefined' || foundToken === 'null') {
+      console.log('🕵️ Trying sessionStorage for token...');
+      foundToken = sessionStorage.getItem('triptask_token');
     }
 
-    validateUser();
+    if (foundToken && foundToken !== 'undefined' && foundToken !== 'null') {
+      console.log('🔓 Token loaded:', foundToken);
+      setToken(foundToken);
+    } else {
+      console.warn('❌ No token found, redirecting to login...');
+      router.replace('/login');
+    }
   }, [router]);
 
+  // ✅ Validate user when token is set
   useEffect(() => {
     if (!token) return;
 
-    const fetchInitialStatus = async (authToken: string) => {
+    const validateUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        console.log('✅ Authenticated user:', user);
+        setIsLoadingUser(false);
+      } catch (err) {
+        console.error('❌ Invalid token or auth failed:', err);
+        router.replace('/login');
+      }
+    };
+
+    validateUser();
+  }, [token, router]);
+
+  // ✅ Handle socket connection and service status
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchInitialStatus = async () => {
       try {
         const res = await fetch(`${API_BASE}/service-status`, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         console.log('🌐 Initial service status:', data.isOnline);
@@ -74,7 +83,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       }
     };
 
-    fetchInitialStatus(token);
+    fetchInitialStatus();
 
     socket = io(API_BASE, {
       auth: { token },
@@ -131,7 +140,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     setTimeout(() => router.push('/login'), 800);
   };
 
-  if (isLoadingUser) {
+  if (!hydrated || isLoadingUser) {
     return <div className="p-4 text-center text-gray-500 font-mono">Authenticating...</div>;
   }
 
