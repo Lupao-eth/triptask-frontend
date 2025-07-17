@@ -5,6 +5,7 @@ import { ChevronRight, ArrowLeft, Loader2, Copy } from 'lucide-react';
 import TopBar from '@/app/customer/dashboard/TopBar';
 import SideMenu from '@/app/customer/dashboard/SideMenu';
 import { useEffect, useState } from 'react';
+import TawkLoader from '@/components/TawkLoader';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const SUPPORT_EMAIL = 'triptask0514@gmail.com';
@@ -61,23 +62,6 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
-  // ✅ Load Tawk script manually (but hidden by default)
-  useEffect(() => {
-    const existingScript = document.querySelector('script[src*="tawk.to"]');
-    if (existingScript) return;
-
-    const script = document.createElement('script');
-    script.src = 'https://embed.tawk.to/687973d03d9d30190be7996e/1j0d6opoa';
-    script.async = true;
-    script.charset = 'UTF-8';
-    script.setAttribute('crossorigin', '*');
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   const handleCopy = () => {
     navigator.clipboard.writeText(SUPPORT_EMAIL);
     setCopied(true);
@@ -97,6 +81,7 @@ export default function HelpPage() {
       className="flex min-h-screen bg-white text-black"
       style={{ fontFamily: 'var(--font-geist-mono)' }}
     >
+      <TawkLoader />
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
         <TopBar name={profileName} />

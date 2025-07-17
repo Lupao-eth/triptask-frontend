@@ -1,4 +1,3 @@
-// src/components/TawkLoader.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,7 +9,7 @@ export default function TawkLoader() {
     if (typeof window === 'undefined' || window.Tawk_API || loaded) return;
 
     const script = document.createElement('script');
-    script.src = 'https://embed.tawk.to/YOUR_TAWK_ID/DEFAULT';
+    script.src = 'https://embed.tawk.to/687973d03d9d30190be7996e/1j0d6opoa';
     script.async = true;
     script.charset = 'UTF-8';
     script.setAttribute('crossorigin', '*');
