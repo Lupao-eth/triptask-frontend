@@ -402,14 +402,21 @@ useEffect(() => {
             <input type="file" multiple onChange={handleFileChange} className="hidden" disabled={sending} />
           </label>
           <div className="flex-1">
-            <input
-              type="text"
-              className="w-full border border-gray-300 px-3 py-2 rounded-md text-sm text-black"
-              placeholder="Type a message..."
-              value={newText}
-              onChange={(e) => setNewText(e.target.value)}
-            />
-          </div>
+              <textarea
+                className="w-full max-h-40 min-h-[40px] border border-gray-300 px-3 py-2 rounded-md text-sm text-black resize-none overflow-y-auto"
+                placeholder="Type a message..."
+                value={newText}
+                onChange={(e) => {
+                  setNewText(e.target.value);
+
+                  // Auto-grow the textarea
+                  const textarea = e.target as HTMLTextAreaElement;
+                  textarea.style.height = 'auto';
+                  textarea.style.height = `${textarea.scrollHeight}px`;
+                }}
+              />
+            </div>
+
           <button
   onClick={sendMessage}
   disabled={sending}
