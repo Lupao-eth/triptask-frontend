@@ -131,13 +131,6 @@ const res = await fetch(`${API_BASE}/auth/token`, {
       <TopBar name={user.name || 'Customer'} />
       <SideMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <button
-        className="fixed top-4 left-4 z-50 text-2xl text-black"
-        onClick={() => setMenuOpen(!menuOpen)}
-        aria-label="Toggle Menu"
-      >
-        &#9776;
-      </button>
 
       <div className="p-4 sm:p-6 max-w-3xl mx-auto text-black">
         <div className="flex items-center justify-center relative mb-8">
