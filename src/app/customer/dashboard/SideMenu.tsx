@@ -43,18 +43,19 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (res.ok) {
-        router.push('/login');
-      } else {
-        console.error('Logout failed');
-      }
+      // Optional: remove this fetch if your backend doesn't invalidate refresh tokens
+      await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
     } catch (err) {
       console.error('Error logging out:', err);
     }
+
+    // Clear localStorage tokens
+    localStorage.removeItem('triptask_token');
+    localStorage.removeItem('triptask_refresh_token');
+    localStorage.removeItem('triptask_expire_at');
+
+    // Redirect to login
+    router.push('/login');
   };
 
   return (
@@ -95,7 +96,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
 
         <nav className="flex flex-col gap-2 p-4 text-base">
           <button
-            onClick={() => goTo('/customer/dashboard', true)} // ✅ loading
+            onClick={() => goTo('/customer/dashboard', true)}
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <Home size={20} /> Home
@@ -106,42 +107,42 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose }) => {
           </div>
 
           <button
-            onClick={() => goTo('/customer/trip')} // ❌ no loading
+            onClick={() => goTo('/customer/trip')}
             className="flex items-center gap-3 pl-12 pr-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <MapPin size={20} /> Trip
           </button>
 
           <button
-            onClick={() => goTo('/customer/task', true)} // ✅ loading
+            onClick={() => goTo('/customer/task', true)}
             className="flex items-center gap-3 pl-12 pr-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <ClipboardList size={20} /> Task
           </button>
 
           <button
-            onClick={() => goTo('/customer/bookstatus', true)} // ✅ loading
+            onClick={() => goTo('/customer/bookstatus', true)}
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <CalendarCheck size={20} /> Book Status
           </button>
 
           <button
-            onClick={() => goTo('/customer/chat', true)} // ✅ loading
+            onClick={() => goTo('/customer/chat', true)}
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <MessageCircle size={20} /> Chat
           </button>
 
           <button
-            onClick={() => goTo('/customer/book-history', true)} // ✅ loading
+            onClick={() => goTo('/customer/book-history', true)}
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <Clock size={20} /> Book History
           </button>
 
           <button
-            onClick={() => goTo('/customer/help')} // ❌ no loading
+            onClick={() => goTo('/customer/help')}
             className="flex items-center gap-3 px-4 py-3 rounded hover:bg-yellow-300 transition"
           >
             <HelpCircle size={20} /> Help
