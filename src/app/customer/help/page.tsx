@@ -20,6 +20,7 @@ declare global {
       onLoad?: () => void;
       [key: string]: unknown;
     };
+    TAWK_READY?: boolean;
   }
 }
 
@@ -30,7 +31,6 @@ export default function HelpPage() {
   const [tokenValid, setTokenValid] = useState(false);
   const [profileName, setProfileName] = useState('User');
   const [copied, setCopied] = useState(false);
-  const [tawkReady, setTawkReady] = useState(false);
 
   // 🔐 Token validation
   useEffect(() => {
@@ -64,24 +64,6 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
-  // 👀 Wait for widget, then hide it
-  useEffect(() => {
-    const checkTawk = setInterval(() => {
-      if (
-        typeof window !== 'undefined' &&
-        window.Tawk_API &&
-        typeof window.Tawk_API.hide === 'function'
-      ) {
-        window.Tawk_API.hide(); // use `hide` instead of hideWidget
-        setTawkReady(true);
-        clearInterval(checkTawk);
-        console.log('✅ Tawk widget is ready and hidden');
-      }
-    }, 300);
-
-    return () => clearInterval(checkTawk);
-  }, []);
-
   const handleCopy = () => {
     navigator.clipboard.writeText(SUPPORT_EMAIL);
     setCopied(true);
@@ -89,9 +71,8 @@ export default function HelpPage() {
   };
 
   const openTawk = () => {
-    if (tawkReady && window.Tawk_API?.show && window.Tawk_API?.toggle) {
-      window.Tawk_API.show();   // make widget visible
-      window.Tawk_API.toggle(); // open the chat popup
+    if (typeof window !== 'undefined' && window.TAWK_READY && window.Tawk_API?.toggle) {
+      window.Tawk_API.toggle(); // opens the widget
     } else {
       console.warn('❗ Tawk widget not ready yet');
     }
