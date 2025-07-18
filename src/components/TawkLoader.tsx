@@ -1,11 +1,19 @@
+// src/components/TawkLoader.tsx
 'use client';
 
 import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function TawkLoader() {
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  const pathname = usePathname();
 
+  const shouldLoadTawk =
+    pathname === '/login' || pathname === '/customer/help'; // ✅ You can add more routes here
+
+  useEffect(() => {
+    if (!shouldLoadTawk) return;
+
+    if (typeof window === 'undefined') return;
     if (window.Tawk_API || document.getElementById('tawk-script')) return;
 
     window.Tawk_API = window.Tawk_API || {};
@@ -21,7 +29,15 @@ export default function TawkLoader() {
     script.charset = 'UTF-8';
     script.setAttribute('crossorigin', '*');
     document.body.appendChild(script);
-  }, []);
+
+    return () => {
+      const existing = document.getElementById('tawk-script');
+      if (existing) existing.remove();
+      delete window.Tawk_API;
+      delete window.Tawk_LoadStart;
+      window.TAWK_READY = false;
+    };
+  }, [shouldLoadTawk]);
 
   return null;
 }

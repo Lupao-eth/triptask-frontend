@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Toaster } from 'react-hot-toast';
 import { UserProvider } from '@/context/UserContext';
 import { loadTokensFromStorage, getAccessToken, logoutUser } from '@/lib/api';
+import TawkLoader from '@/components/TawkLoader'; // ✅ Import the widget loader
 
 export default function RootLayoutClient({
   children,
@@ -38,6 +39,7 @@ export default function RootLayoutClient({
     <body className="antialiased bg-white text-black">
       <UserProvider>
         {children}
+        <TawkLoader /> {/* ✅ Tawk only loads on /login and /customer/help */}
         <Toaster
           position="top-center"
           toastOptions={{

@@ -1,3 +1,4 @@
+// src/types/tawk.d.ts
 export {};
 
 declare global {
@@ -8,9 +9,11 @@ declare global {
       hide?: () => void;
       showWidget?: () => void;
       hideWidget?: () => void;
+      maximize?: () => void;
       onLoad?: () => void;
       [key: string]: unknown;
     };
+    Tawk_LoadStart?: Date;
     TAWK_READY?: boolean;
   }
 }
