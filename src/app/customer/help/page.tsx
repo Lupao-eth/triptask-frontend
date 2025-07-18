@@ -10,14 +10,13 @@ import TawkLoader from '@/components/TawkLoader';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const SUPPORT_EMAIL = 'triptask0514@gmail.com';
 
+// ✅ Clean Tawk_API typing (no conflict)
 declare global {
   interface Window {
     Tawk_API?: {
       toggle?: () => void;
       show?: () => void;
       hide?: () => void;
-      hideWidget?: () => void;
-      showWidget?: () => void;
       onLoad?: () => void;
       [key: string]: unknown;
     };
@@ -33,6 +32,7 @@ export default function HelpPage() {
   const [copied, setCopied] = useState(false);
   const [tawkReady, setTawkReady] = useState(false);
 
+  // 🔐 Token validation
   useEffect(() => {
     const validateToken = async () => {
       const savedToken = localStorage.getItem('triptask_token');
@@ -56,6 +56,7 @@ export default function HelpPage() {
     validateToken();
   }, [router]);
 
+  // ⏳ Loader delay
   useEffect(() => {
     if (tokenValid) {
       const timer = setTimeout(() => setIsLoading(false), 300);
@@ -63,22 +64,22 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
-  // ✅ Detect and hide the widget after load
+  // 👀 Wait for widget, then hide it
   useEffect(() => {
-    const interval = setInterval(() => {
+    const checkTawk = setInterval(() => {
       if (
         typeof window !== 'undefined' &&
         window.Tawk_API &&
-        typeof window.Tawk_API.hideWidget === 'function'
+        typeof window.Tawk_API.hide === 'function'
       ) {
-        window.Tawk_API.hideWidget();
+        window.Tawk_API.hide(); // use `hide` instead of hideWidget
         setTawkReady(true);
-        clearInterval(interval);
+        clearInterval(checkTawk);
         console.log('✅ Tawk widget is ready and hidden');
       }
     }, 300);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(checkTawk);
   }, []);
 
   const handleCopy = () => {
@@ -88,9 +89,9 @@ export default function HelpPage() {
   };
 
   const openTawk = () => {
-    if (tawkReady && window.Tawk_API?.showWidget && window.Tawk_API?.toggle) {
-      window.Tawk_API.showWidget(); // ensure widget is visible
-      window.Tawk_API.toggle();     // open the chat
+    if (tawkReady && window.Tawk_API?.show && window.Tawk_API?.toggle) {
+      window.Tawk_API.show();   // make widget visible
+      window.Tawk_API.toggle(); // open the chat popup
     } else {
       console.warn('❗ Tawk widget not ready yet');
     }
