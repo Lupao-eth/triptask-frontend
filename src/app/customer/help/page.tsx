@@ -10,20 +10,6 @@ import TawkLoader from '@/components/TawkLoader';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const SUPPORT_EMAIL = 'triptask0514@gmail.com';
 
-// ✅ Clean Tawk_API typing (no conflict)
-declare global {
-  interface Window {
-    Tawk_API?: {
-      toggle?: () => void;
-      show?: () => void;
-      hide?: () => void;
-      onLoad?: () => void;
-      [key: string]: unknown;
-    };
-    TAWK_READY?: boolean;
-  }
-}
-
 export default function HelpPage() {
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
