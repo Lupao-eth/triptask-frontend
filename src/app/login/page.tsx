@@ -74,8 +74,8 @@ export default function LoginPage() {
   };
 
   const handleHelpClick = () => {
-    if (typeof window !== 'undefined' && typeof window.Tawk_API?.showWidget === 'function') {
-      window.Tawk_API.showWidget();
+    if (typeof window !== 'undefined' && typeof window.Tawk_API?.maximize === 'function') {
+      window.Tawk_API.maximize();
       console.log('🟢 Tawk widget opened from Login');
     } else {
       console.warn('❗ Tawk widget not ready');
