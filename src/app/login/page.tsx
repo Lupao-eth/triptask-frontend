@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [helpMessage, setHelpMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setUser } = useUser();
@@ -77,8 +78,10 @@ export default function LoginPage() {
     if (typeof window !== 'undefined' && typeof window.Tawk_API?.maximize === 'function') {
       window.Tawk_API.maximize();
       console.log('🟢 Tawk widget opened from Login');
+      setHelpMessage('');
     } else {
       console.warn('❗ Tawk widget not ready');
+      setHelpMessage('❗ Chat is still loading. Please wait a minute and try again.');
     }
   };
 
@@ -153,6 +156,12 @@ export default function LoginPage() {
           >
             Need help? Contact us
           </button>
+
+          {helpMessage && (
+            <div className="text-center text-sm text-red-500 mt-2 animate-pulse">
+              {helpMessage}
+            </div>
+          )}
         </div>
       </div>
     </main>
