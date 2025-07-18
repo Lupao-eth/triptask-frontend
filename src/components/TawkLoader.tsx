@@ -1,35 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function TawkLoader() {
-  const [loaded, setLoaded] = useState(false);
-
   useEffect(() => {
-    if (typeof window === 'undefined' || loaded) return;
+    if (typeof window === 'undefined') return;
 
-    // Prevent loading script multiple times
-    if (document.getElementById('tawk-script')) return;
+    if (window.Tawk_API) return; // already loaded
 
-    // Set up Tawk_API and hide on load
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_API.onLoad = function () {
-      if (typeof window.Tawk_API?.hide === 'function') {
-        window.Tawk_API.hide(); // Hide the widget immediately
+      if (typeof window.Tawk_API?.hideWidget === 'function') {
+        window.Tawk_API.hideWidget();
         console.log('✅ Tawk loaded and widget hidden');
       }
-      setLoaded(true);
     };
 
     const script = document.createElement('script');
-    script.id = 'tawk-script';
-    script.src = 'https://embed.tawk.to/687973d03d9d30190be7996e/1j0d6opoa'; // ✅ Your widget URL
+    script.src = 'https://embed.tawk.to/687973d03d9d30190be7996e/1j0d6opoa';
     script.async = true;
     script.charset = 'UTF-8';
     script.setAttribute('crossorigin', '*');
-
     document.body.appendChild(script);
-  }, [loaded]);
+  }, []);
 
   return null;
 }

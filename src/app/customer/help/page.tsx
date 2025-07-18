@@ -16,6 +16,8 @@ declare global {
       toggle?: () => void;
       show?: () => void;
       hide?: () => void;
+      hideWidget?: () => void;
+      showWidget?: () => void;
       onLoad?: () => void;
       [key: string]: unknown;
     };
@@ -61,33 +63,22 @@ export default function HelpPage() {
     }
   }, [tokenValid]);
 
+  // ✅ Detect and hide the widget after load
   useEffect(() => {
-    const handleTawkLoad = () => {
-      if (window.Tawk_API?.hide) {
-        window.Tawk_API.hide();
+    const interval = setInterval(() => {
+      if (
+        typeof window !== 'undefined' &&
+        window.Tawk_API &&
+        typeof window.Tawk_API.hideWidget === 'function'
+      ) {
+        window.Tawk_API.hideWidget();
         setTawkReady(true);
-        console.log('✅ Tawk widget hidden after load');
+        clearInterval(interval);
+        console.log('✅ Tawk widget is ready and hidden');
       }
-    };
+    }, 300);
 
-    if (typeof window !== 'undefined') {
-      if (window.Tawk_API?.onLoad) {
-        window.Tawk_API.onLoad = handleTawkLoad;
-      } else {
-        setTimeout(() => {
-          if (window.Tawk_API?.hide) {
-            window.Tawk_API.hide();
-            setTawkReady(true);
-          }
-        }, 1000); // fallback if onLoad wasn't set early enough
-      }
-    }
-
-    return () => {
-      if (window.Tawk_API?.hide) {
-        window.Tawk_API.hide();
-      }
-    };
+    return () => clearInterval(interval);
   }, []);
 
   const handleCopy = () => {
@@ -97,9 +88,9 @@ export default function HelpPage() {
   };
 
   const openTawk = () => {
-    if (tawkReady && window.Tawk_API?.toggle) {
-      window.Tawk_API.show?.();
-      window.Tawk_API.toggle();
+    if (tawkReady && window.Tawk_API?.showWidget && window.Tawk_API?.toggle) {
+      window.Tawk_API.showWidget(); // ensure widget is visible
+      window.Tawk_API.toggle();     // open the chat
     } else {
       console.warn('❗ Tawk widget not ready yet');
     }
@@ -108,7 +99,10 @@ export default function HelpPage() {
   if (!tokenValid) return null;
 
   return (
-    <div className="flex min-h-screen bg-white text-black" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+    <div
+      className="flex min-h-screen bg-white text-black"
+      style={{ fontFamily: 'var(--font-geist-mono)' }}
+    >
       <TawkLoader />
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <div className="flex flex-col flex-1">
@@ -136,7 +130,9 @@ export default function HelpPage() {
                   onClick={() => router.push('/customer/help/how-to-use')}
                   className="w-full max-w-md relative flex items-center justify-center px-4 py-3 bg-yellow-300 hover:bg-yellow-400 rounded-lg font-semibold shadow text-sm md:text-base"
                 >
-                  <span className="absolute left-1/2 transform -translate-x-1/2">How to use?</span>
+                  <span className="absolute left-1/2 transform -translate-x-1/2">
+                    How to use?
+                  </span>
                   <ChevronRight size={20} className="ml-auto" />
                 </button>
 
@@ -168,7 +164,9 @@ export default function HelpPage() {
                 <div className="text-sm text-gray-700 mt-2">
                   or email us at:
                   <div className="mt-2 inline-flex items-center bg-white border border-gray-300 px-3 py-2 rounded-md shadow-sm text-xs md:text-sm">
-                    <span className="mr-2 truncate max-w-[160px]">{SUPPORT_EMAIL}</span>
+                    <span className="mr-2 truncate max-w-[160px]">
+                      {SUPPORT_EMAIL}
+                    </span>
                     <button
                       onClick={handleCopy}
                       className="text-blue-600 hover:text-blue-800 transition"
