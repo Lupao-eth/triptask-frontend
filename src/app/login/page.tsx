@@ -43,7 +43,6 @@ export default function LoginPage() {
 
       const { token, refreshToken } = data;
 
-      // Always store tokens persistently
       localStorage.setItem('triptask_token', token);
       localStorage.setItem('triptask_refresh_token', refreshToken || '');
       localStorage.removeItem('triptask_expire_at');
@@ -71,6 +70,15 @@ export default function LoginPage() {
       setMessage('❌ Something went wrong. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleHelpClick = () => {
+    if (typeof window !== 'undefined' && typeof window.Tawk_API?.showWidget === 'function') {
+      window.Tawk_API.showWidget();
+      console.log('🟢 Tawk widget opened from Login');
+    } else {
+      console.warn('❗ Tawk widget not ready');
     }
   };
 
@@ -137,6 +145,15 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+
+        <div className="text-center pt-2">
+          <button
+            onClick={handleHelpClick}
+            className="text-sm text-blue-500 underline hover:text-blue-700"
+          >
+            Need help? Contact us
+          </button>
+        </div>
       </div>
     </main>
   );
