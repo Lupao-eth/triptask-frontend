@@ -157,7 +157,7 @@ const TaskPage = () => {
             <input
               type="text"
               className="w-full px-3 py-2 border border-gray-300 rounded"
-              placeholder="What should we call you"
+              placeholder="Name of Booker"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
