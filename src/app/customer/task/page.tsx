@@ -102,7 +102,7 @@ const TaskPage = () => {
       if (!res.ok) {
   const error = await res.json();
   if (error.message?.includes('Maximum of 5 active bookings')) {
-    toast.error("🚫 You've reached your limit of 5 active bookings. If you need more, please contact customer support.");
+    toast.error("You've reached your limit of 5 active bookings. If you need more, please contact customer support.");
   } else {
     toast.error(`❌ ${error.message || 'Something went wrong'}`);
   }
