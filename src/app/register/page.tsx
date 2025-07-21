@@ -11,6 +11,8 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -32,12 +34,9 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Step 1: Register
       const registerRes = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
 
@@ -50,12 +49,9 @@ export default function RegisterPage() {
 
       setMessage('✅ Account created! Logging in...');
 
-      // Step 2: Auto-login after successful registration
       const loginRes = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
@@ -67,10 +63,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Step 3: Save token to localStorage
       localStorage.setItem('triptask_token', loginData.token);
 
-      // Step 4: Decode role and redirect
       const decoded = JSON.parse(atob(loginData.token.split('.')[1]));
       if (decoded.role === 'customer') {
         router.push('/customer/dashboard');
@@ -121,28 +115,95 @@ export default function RegisterPage() {
               className="w-full px-4 py-2 border border-orange-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
           </div>
-          <div>
+
+          {/* Password Field */}
+          <div className="relative">
             <label className="block mb-1 font-medium">Password</label>
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Create a strong password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-orange-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full px-4 py-2 border border-orange-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400 pr-10"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[58%] transform -translate-y-1/2 text-yellow-600 hover:text-yellow-800"
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.964 9.964 0 012.816-6.936m1.562-1.562A9.964 9.964 0 0112 1c5.523 0 10 4.477 10 10 0 2.21-.714 4.244-1.914 5.897m-1.62 1.648l-14-14"
+                  />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              )}
+            </button>
           </div>
-          <div>
+
+          {/* Confirm Password Field */}
+          <div className="relative">
             <label className="block mb-1 font-medium">Confirm Password</label>
             <input
-              type="password"
+              type={showConfirm ? 'text' : 'password'}
               placeholder="Repeat your password"
               required
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="w-full px-4 py-2 border border-orange-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full px-4 py-2 border border-orange-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400 pr-10"
             />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+              className="absolute right-3 top-[58%] transform -translate-y-1/2 text-yellow-600 hover:text-yellow-800"
+            >
+              {showConfirm ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.964 9.964 0 012.816-6.936m1.562-1.562A9.964 9.964 0 0112 1c5.523 0 10 4.477 10 10 0 2.21-.714 4.244-1.914 5.897m-1.62 1.648l-14-14"
+                  />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              )}
+            </button>
           </div>
+
           <button
             type="submit"
             disabled={loading}
