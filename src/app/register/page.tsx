@@ -174,7 +174,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-[58%] transform -translate-y-1/2 text-yellow-600 hover:text-yellow-800"
+              className="absolute right-3 top-[58%] text-yellow-600 hover:text-yellow-800"
             >
               {showConfirm ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
