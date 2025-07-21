@@ -11,6 +11,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [helpMessage, setHelpMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -114,21 +115,40 @@ export default function LoginPage() {
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block mb-1 font-medium" htmlFor="password">
               Password
             </label>
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Enter your password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-yellow-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              className="w-full px-4 py-2 border border-yellow-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 pr-10"
               autoComplete="current-password"
               disabled={loading}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              className="absolute right-2 top-[42px] transform -translate-y-1/2 text-yellow-600 hover:text-yellow-800 focus:outline-none"
+              tabIndex={-1}
+            >
+              {showPassword ? (
+                // Eye off icon
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.477 0-8.268-2.943-9.542-7a10.06 10.06 0 012.362-4.036m2.122-1.97A9.964 9.964 0 0112 5c4.477 0 8.268 2.943 9.542 7a9.965 9.965 0 01-1.357 2.572M15 12a3 3 0 00-3-3m0 0a3 3 0 013 3m0 0a3 3 0 01-3 3m-9-3L3 3m0 0l18 18" />
+                </svg>
+              ) : (
+                // Eye icon
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
+            </button>
           </div>
 
           <button
