@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
+// Allowed characters: letters with accents and spaces
+const validNameRegex = /^[\p{L} ]+$/u;
+
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -14,14 +17,46 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [message, setMessage] = useState('');
+  const [nameError, setNameError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const validateName = (input: string) => {
+    if (!input) {
+      setNameError('');
+      return true;
+    }
+
+    if (!validNameRegex.test(input)) {
+      if (/\d/.test(input)) {
+        setNameError('❗ Name cannot contain numbers.');
+      } else {
+        setNameError('❗ Name must not contain symbols or special characters.');
+      }
+      return false;
+    }
+
+    setNameError('');
+    return true;
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (validateName(value)) {
+      setName(value);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !email || !password || !confirm) {
       setMessage('❗ All fields are required.');
+      return;
+    }
+
+    if (!validateName(name)) {
+      setMessage('❗ Invalid name format.');
       return;
     }
 
@@ -97,13 +132,17 @@ export default function RegisterPage() {
             <label className="block mb-1 font-medium">Name</label>
             <input
               type="text"
-              placeholder="e.g. David"
+              placeholder="e.g. José, María"
               required
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={handleNameChange}
               className="w-full px-4 py-2 border border-orange-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
+            {nameError && (
+              <p className="text-red-600 text-sm mt-1">{nameError}</p>
+            )}
           </div>
+
           <div>
             <label className="block mb-1 font-medium">Email</label>
             <input
@@ -134,27 +173,12 @@ export default function RegisterPage() {
             >
               {showPassword ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.964 9.964 0 012.816-6.936m1.562-1.562A9.964 9.964 0 0112 1c5.523 0 10 4.477 10 10 0 2.21-.714 4.244-1.914 5.897m-1.62 1.648l-14-14"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.964 9.964 0 012.816-6.936m1.562-1.562A9.964 9.964 0 0112 1c5.523 0 10 4.477 10 10 0 2.21-.714 4.244-1.914 5.897m-1.62 1.648l-14-14" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z" />
                 </svg>
               )}
             </button>
@@ -178,27 +202,12 @@ export default function RegisterPage() {
             >
               {showConfirm ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.964 9.964 0 012.816-6.936m1.562-1.562A9.964 9.964 0 0112 1c5.523 0 10 4.477 10 10 0 2.21-.714 4.244-1.914 5.897m-1.62 1.648l-14-14"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5.523 0-10-4.477-10-10a9.964 9.964 0 012.816-6.936m1.562-1.562A9.964 9.964 0 0112 1c5.523 0 10 4.477 10 10 0 2.21-.714 4.244-1.914 5.897m-1.62 1.648l-14-14" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z" />
                 </svg>
               )}
             </button>
@@ -208,9 +217,7 @@ export default function RegisterPage() {
             type="submit"
             disabled={loading}
             className={`w-full py-2 font-semibold rounded text-white transition ${
-              loading
-                ? 'bg-orange-300 cursor-not-allowed'
-                : 'bg-yellow-500 hover:bg-yellow-600'
+              loading ? 'bg-orange-300 cursor-not-allowed' : 'bg-yellow-500 hover:bg-yellow-600'
             }`}
           >
             {loading ? 'Creating Account...' : 'Create Account'}
